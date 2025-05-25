@@ -9,7 +9,8 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
-  Shirt
+  Shirt,
+  Calculator
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -19,6 +20,7 @@ const Sidebar = () => {
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
+    { icon: Calculator, label: 'Orçamentos', path: '/orcamentos' },
     { icon: ClipboardList, label: 'Ordem de Serviço', path: '/ordem-servico' },
     { icon: Package, label: 'Acompanhar Pedido', path: '/acompanhar-pedido' },
     { icon: Settings, label: 'Configurações', path: '/configuracoes' },
