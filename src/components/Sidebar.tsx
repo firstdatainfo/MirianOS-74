@@ -11,18 +11,24 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const menuItems = [
-    { icon: Home, label: 'Dashboard', active: true },
-    { icon: Users, label: 'Clientes', count: 156 },
-    { icon: ClipboardList, label: 'Pedidos', count: 23 },
-    { icon: Package, label: 'Serviços', count: 8 },
-    { icon: CheckCircle, label: 'Qualidade' },
-    { icon: FileText, label: 'Relatórios' },
-    { icon: BarChart3, label: 'Análises' },
-    { icon: Settings, label: 'Configurações' },
+    { icon: Home, label: 'Dashboard', path: '/', count: null },
+    { icon: Users, label: 'Clientes', path: '/clientes', count: 156 },
+    { icon: ClipboardList, label: 'OS', path: '/ordem-servico', count: 23 },
+    { icon: Package, label: 'Serviços', path: '/servicos', count: 8 },
+    { icon: CheckCircle, label: 'Qualidade', path: '/qualidade', count: null },
+    { icon: FileText, label: 'Relatórios', path: '/relatorios', count: null },
+    { icon: BarChart3, label: 'Análises', path: '/analises', count: null },
+    { icon: Settings, label: 'Configurações', path: '/configuracoes', count: null },
   ];
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <aside className="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white h-screen sticky top-0">
@@ -41,12 +47,13 @@ const Sidebar = () => {
           {menuItems.map((item, index) => (
             <Button
               key={index}
-              variant={item.active ? "secondary" : "ghost"}
+              variant={isActive(item.path) ? "secondary" : "ghost"}
               className={`w-full justify-start text-left ${
-                item.active 
+                isActive(item.path)
                   ? 'bg-gradient-brand text-white hover:bg-gradient-brand/90' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-700'
               }`}
+              onClick={() => navigate(item.path)}
             >
               <item.icon className="h-5 w-5 mr-3" />
               <span className="flex-1">{item.label}</span>
