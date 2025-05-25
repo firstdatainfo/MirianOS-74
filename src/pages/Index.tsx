@@ -1,11 +1,88 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
+import DashboardCard from '@/components/DashboardCard';
+import ServiceOrderTable from '@/components/ServiceOrderTable';
+import QuickActions from '@/components/QuickActions';
+import { Users, ClipboardList, DollarSign, TrendingUp } from 'lucide-react';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col">
+        <Header />
+        
+        <main className="flex-1 p-6 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <DashboardCard
+              title="Total de Clientes"
+              value="156"
+              change="+12.5%"
+              icon={Users}
+              trend="up"
+            />
+            <DashboardCard
+              title="Pedidos Ativos"
+              value="23"
+              change="+8.2%"
+              icon={ClipboardList}
+              trend="up"
+            />
+            <DashboardCard
+              title="Receita Mensal"
+              value="R$ 15.420"
+              change="+15.3%"
+              icon={DollarSign}
+              trend="up"
+            />
+            <DashboardCard
+              title="Taxa de Qualidade"
+              value="98.5%"
+              change="+2.1%"
+              icon={TrendingUp}
+              trend="up"
+            />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ServiceOrderTable />
+            </div>
+            <div>
+              <QuickActions />
+            </div>
+          </div>
+
+          {/* Welcome Section */}
+          <div className="bg-gradient-brand rounded-xl p-8 text-white animate-fade-in">
+            <h2 className="text-2xl font-bold mb-2">
+              Bem-vindo ao ServicePro! 🎉
+            </h2>
+            <p className="text-blue-100 mb-4">
+              Sistema completo de gestão de serviços. Gerencie clientes, pedidos, 
+              ordens de serviço e muito mais em uma plataforma moderna e intuitiva.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <div className="bg-white/10 rounded-lg p-4 flex-1 min-w-48">
+                <h3 className="font-semibold mb-1">📱 Mobile Ready</h3>
+                <p className="text-sm text-blue-100">Interface responsiva para todos os dispositivos</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 flex-1 min-w-48">
+                <h3 className="font-semibold mb-1">⚡ Performance</h3>
+                <p className="text-sm text-blue-100">Carregamento rápido e otimizado</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 flex-1 min-w-48">
+                <h3 className="font-semibold mb-1">🔒 Seguro</h3>
+                <p className="text-sm text-blue-100">Dados protegidos e criptografados</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
