@@ -220,7 +220,7 @@ const OrdemServico = () => {
       acabamento: ordem.acabamento
     });
     setEditingId(ordem.id);
-    setShowForm(true);
+    setIsEditDialogOpen(true);
   };
 
   const handleStatusChange = (ordemId: string, newStatus: OrdemServico['status']) => {
@@ -621,6 +621,79 @@ const OrdemServico = () => {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Editar */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Ordem de Serviço - {selectedOrder?.id}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-cliente">Cliente</Label>
+                  <Input 
+                    id="edit-cliente"
+                    value={formData.cliente} 
+                    onChange={e => setFormData({ ...formData, cliente: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-entrada">Data Entrada</Label>
+                  <Input 
+                    id="edit-entrada"
+                    type="date" 
+                    value={formData.entrada} 
+                    onChange={e => setFormData({ ...formData, entrada: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-saida">Data Saída</Label>
+                  <Input 
+                    id="edit-saida"
+                    type="date" 
+                    value={formData.saida} 
+                    onChange={e => setFormData({ ...formData, saida: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-preco">Preço Unitário</Label>
+                  <Input 
+                    id="edit-preco"
+                    type="number" 
+                    step="0.01"
+                    value={formData.precoUnitario} 
+                    onChange={e => setFormData({ ...formData, precoUnitario: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-observacoes">Observações</Label>
+                <Textarea 
+                  id="edit-observacoes"
+                  value={formData.observacoes}
+                  onChange={e => setFormData({ ...formData, observacoes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-green-500 hover:bg-green-600">
+                  Salvar Alterações
+                </Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
