@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import BuscaCliente from '@/components/BuscaCliente';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, Plus, Search, Edit, Eye } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface Cliente {
+  id: string;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+}
+
 interface OrdemServico {
   id: string;
   cliente: string;
@@ -35,6 +49,7 @@ interface OrdemServico {
   status: 'pendente' | 'em-andamento' | 'concluido' | 'entregue';
   dataCriacao: string;
 }
+
 const OrdemServico = () => {
   const [ordens, setOrdens] = useState<OrdemServico[]>([{
     id: 'OS-001',
@@ -65,6 +80,10 @@ const OrdemServico = () => {
   }]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [buscaOrdens, setBuscaOrdens] = useState('');
+  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     cliente: '',
     entrada: '',
@@ -88,6 +107,32 @@ const OrdemServico = () => {
     quantidade: 1,
     acabamento: ''
   });
+
+  const handleClienteSelecionado = (cliente: Cliente) => {
+    setClienteSelecionado(cliente);
+    setFormData(prev => ({
+      ...prev,
+      cliente: cliente.nome
+    }));
+    toast({
+      title: "Cliente selecionado",
+      description: `${cliente.nome} foi adicionado à ordem de serviço.`,
+    });
+  };
+
+  const handleNovoCliente = () => {
+    toast({
+      title: "Função em desenvolvimento",
+      description: "Redirecionamento para cadastro de cliente será implementado.",
+    });
+  };
+
+  const ordensFiltradasPorBusca = ordens.filter(ordem => 
+    ordem.id.toLowerCase().includes(buscaOrdens.toLowerCase()) ||
+    ordem.cliente.toLowerCase().includes(buscaOrdens.toLowerCase()) ||
+    ordem.status.toLowerCase().includes(buscaOrdens.toLowerCase())
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const valor = formData.precoUnitario * formData.quantidade;
@@ -109,6 +154,7 @@ const OrdemServico = () => {
     }
     resetForm();
   };
+
   const resetForm = () => {
     setFormData({
       cliente: '',
@@ -135,7 +181,9 @@ const OrdemServico = () => {
     });
     setShowForm(false);
     setEditingId(null);
+    setClienteSelecionado(null);
   };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pendente':
@@ -150,7 +198,9 @@ const OrdemServico = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  return <div className="min-h-screen bg-gray-50 flex">
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
       
       <div className="flex-1 flex flex-col">
@@ -168,7 +218,8 @@ const OrdemServico = () => {
             </Button>
           </div>
 
-          {showForm && <Card className="animate-fade-in">
+          {showForm && (
+            <Card className="animate-fade-in">
               <CardHeader>
                 <CardTitle>
                   {editingId ? 'Editar Ordem de Serviço' : 'Nova Ordem de Serviço'}
@@ -178,37 +229,40 @@ const OrdemServico = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Dados Básicos */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
+                    <div className="md:col-span-2">
                       <Label htmlFor="cliente">Cliente</Label>
-                      <Input id="cliente" value={formData.cliente} onChange={e => setFormData({
-                    ...formData,
-                    cliente: e.target.value
-                  })} required />
+                      <BuscaCliente
+                        onClienteSelecionado={handleClienteSelecionado}
+                        onNovoCliente={handleNovoCliente}
+                      />
+                      {clienteSelecionado && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                          <strong>Cliente selecionado:</strong> {clienteSelecionado.nome}
+                          {clienteSelecionado.telefone && (
+                            <span className="ml-2">• {clienteSelecionado.telefone}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="entrada">Data Entrada</Label>
-                      <Input id="entrada" type="date" value={formData.entrada} onChange={e => setFormData({
-                    ...formData,
-                    entrada: e.target.value
-                  })} required />
+                      <Input
+                        id="entrada"
+                        type="date"
+                        value={formData.entrada}
+                        onChange={e => setFormData({ ...formData, entrada: e.target.value })}
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="saida">Data Saída</Label>
-                      <Input id="saida" type="date" value={formData.saida} onChange={e => setFormData({
-                    ...formData,
-                    saida: e.target.value
-                  })} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="qualidade">Qualidade</Label>
-                      <select id="qualidade" className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md" value={formData.qualidade} onChange={e => setFormData({
-                    ...formData,
-                    qualidade: e.target.value as 'M' | 'G' | 'P'
-                  })}>
-                        <option value="M">M</option>
-                        <option value="G">G</option>
-                        <option value="P">P</option>
-                      </select>
+                      <Input
+                        id="saida"
+                        type="date"
+                        value={formData.saida}
+                        onChange={e => setFormData({ ...formData, saida: e.target.value })}
+                        required
+                      />
                     </div>
                   </div>
 
@@ -371,7 +425,8 @@ const OrdemServico = () => {
                   </div>
                 </form>
               </CardContent>
-            </Card>}
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -379,7 +434,12 @@ const OrdemServico = () => {
                 <CardTitle>Lista de Ordens de Serviço</CardTitle>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input placeholder="Buscar OS..." className="pl-10 w-64" />
+                  <Input
+                    placeholder="Buscar por OS, cliente ou status..."
+                    className="pl-10 w-80"
+                    value={buscaOrdens}
+                    onChange={(e) => setBuscaOrdens(e.target.value)}
+                  />
                 </div>
               </div>
             </CardHeader>
@@ -398,7 +458,8 @@ const OrdemServico = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {ordens.map(ordem => <tr key={ordem.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    {ordensFiltradasPorBusca.map(ordem => (
+                      <tr key={ordem.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium text-brand-blue">{ordem.id}</td>
                         <td className="py-3 px-4">{ordem.cliente}</td>
                         <td className="py-3 px-4">{ordem.entrada}</td>
@@ -419,14 +480,23 @@ const OrdemServico = () => {
                             </Button>
                           </div>
                         </td>
-                      </tr>)}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
+                
+                {ordensFiltradasPorBusca.length === 0 && buscaOrdens && (
+                  <div className="text-center py-8 text-gray-500">
+                    Nenhuma ordem encontrada para "{buscaOrdens}"
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </main>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default OrdemServico;
