@@ -38,7 +38,7 @@ const Sidebar = () => {
       <div className="p-6">
         <div className="flex items-center space-x-3">
           <Shirt className="h-8 w-8 text-brand-blue" />
-          {!isCollapsed && <h2 className="text-xl font-bold text-gray-800">ConfecApp</h2>}
+          {!isCollapsed && <h2 className="text-xl font-bold text-indigo-950">MirianOS</h2>}
         </div>
       </div>
 
