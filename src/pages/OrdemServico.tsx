@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ClipboardList, Plus, Search, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,10 +79,14 @@ const OrdemServico = () => {
     status: 'em-andamento',
     dataCriacao: '01/04/2024'
   }]);
+  
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [buscaOrdens, setBuscaOrdens] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrdemServico | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -142,6 +147,10 @@ const OrdemServico = () => {
         ...formData,
         valor
       } : ordem));
+      toast({
+        title: "Ordem atualizada",
+        description: `Ordem ${editingId} foi atualizada com sucesso.`,
+      });
     } else {
       const novaOrdem: OrdemServico = {
         id: `OS-${String(ordens.length + 1).padStart(3, '0')}`,
@@ -151,6 +160,10 @@ const OrdemServico = () => {
         dataCriacao: new Date().toLocaleDateString('pt-BR')
       };
       setOrdens(prev => [...prev, novaOrdem]);
+      toast({
+        title: "Nova ordem criada",
+        description: `Ordem ${novaOrdem.id} foi criada com sucesso.`,
+      });
     }
     resetForm();
   };
@@ -184,6 +197,42 @@ const OrdemServico = () => {
     setClienteSelecionado(null);
   };
 
+  const handleView = (ordem: OrdemServico) => {
+    setSelectedOrder(ordem);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEdit = (ordem: OrdemServico) => {
+    setSelectedOrder(ordem);
+    setFormData({
+      cliente: ordem.cliente,
+      entrada: ordem.entrada,
+      saida: ordem.saida,
+      observacoes: ordem.observacoes,
+      pedido: ordem.pedido,
+      tipo: ordem.tipo,
+      qualidade: ordem.qualidade,
+      precoUnitario: ordem.precoUnitario,
+      tipoTecido: ordem.tipoTecido,
+      apresentar: ordem.apresentar,
+      tamanho: ordem.tamanho,
+      quantidade: ordem.quantidade,
+      acabamento: ordem.acabamento
+    });
+    setEditingId(ordem.id);
+    setShowForm(true);
+  };
+
+  const handleStatusChange = (ordemId: string, newStatus: OrdemServico['status']) => {
+    setOrdens(prev => prev.map(ordem => 
+      ordem.id === ordemId ? { ...ordem, status: newStatus } : ordem
+    ));
+    toast({
+      title: "Status atualizado",
+      description: `Status da ordem ${ordemId} foi alterado para ${newStatus}.`,
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pendente':
@@ -196,6 +245,16 @@ const OrdemServico = () => {
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pendente': return 'Pendente';
+      case 'em-andamento': return 'Em Andamento';
+      case 'concluido': return 'Concluído';
+      case 'entregue': return 'Entregue';
+      default: return status;
     }
   };
 
@@ -465,17 +524,34 @@ const OrdemServico = () => {
                         <td className="py-3 px-4">{ordem.entrada}</td>
                         <td className="py-3 px-4">{ordem.saida}</td>
                         <td className="py-3 px-4">
-                          <Badge className={getStatusColor(ordem.status)}>
-                            {ordem.status}
-                          </Badge>
+                          <select 
+                            value={ordem.status} 
+                            onChange={(e) => handleStatusChange(ordem.id, e.target.value as OrdemServico['status'])}
+                            className={`px-2 py-1 rounded text-xs font-medium border-0 ${getStatusColor(ordem.status)}`}
+                          >
+                            <option value="pendente">Pendente</option>
+                            <option value="em-andamento">Em Andamento</option>
+                            <option value="concluido">Concluído</option>
+                            <option value="entregue">Entregue</option>
+                          </select>
                         </td>
                         <td className="py-3 px-4 font-medium">R$ {ordem.valor.toFixed(2)}</td>
                         <td className="py-3 px-4">
                           <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleView(ordem)}
+                              className="hover:bg-blue-50 hover:text-blue-600"
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEdit(ordem)}
+                              className="hover:bg-green-50 hover:text-green-600"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
@@ -495,6 +571,59 @@ const OrdemServico = () => {
           </Card>
         </main>
       </div>
+
+      {/* Dialog para Visualizar */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Ordem de Serviço - {selectedOrder?.id}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2">Informações do Cliente</h3>
+                  <p><strong>Nome:</strong> {selectedOrder.cliente}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2">Detalhes da Ordem</h3>
+                  <p><strong>Data Entrada:</strong> {selectedOrder.entrada}</p>
+                  <p><strong>Data Saída:</strong> {selectedOrder.saida}</p>
+                  <p><strong>Status:</strong> 
+                    <Badge className={`ml-2 ${getStatusColor(selectedOrder.status)}`}>
+                      {getStatusText(selectedOrder.status)}
+                    </Badge>
+                  </p>
+                  <p><strong>Valor Total:</strong> R$ {selectedOrder.valor.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2">Especificações do Produto</h3>
+                  <p><strong>Tipo de Tecido:</strong> {selectedOrder.tipoTecido}</p>
+                  <p><strong>Tamanho:</strong> {selectedOrder.tamanho}</p>
+                  <p><strong>Quantidade:</strong> {selectedOrder.quantidade}</p>
+                  <p><strong>Acabamento:</strong> {selectedOrder.acabamento}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2">Detalhes de Produção</h3>
+                  <p><strong>Corte:</strong> {selectedOrder.pedido.corte}</p>
+                  <p><strong>Estampa:</strong> {selectedOrder.pedido.estampa}</p>
+                  <p><strong>Costura:</strong> {selectedOrder.pedido.costura}</p>
+                </div>
+              </div>
+
+              {selectedOrder.observacoes && (
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <h3 className="font-semibold text-gray-700 mb-2">Observações</h3>
+                  <p className="text-gray-600">{selectedOrder.observacoes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
