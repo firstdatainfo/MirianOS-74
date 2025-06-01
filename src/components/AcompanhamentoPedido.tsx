@@ -2,16 +2,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, AlertCircle, Truck, Package, Scissors, Shirt, Palette, Wrench } from 'lucide-react';
 import { OrdemServico } from '@/hooks/useOrdenServico';
 import { useAcompanhamentoOS } from '@/hooks/useEtapasProducao';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AcompanhamentoPedidoProps {
   ordemServico: OrdemServico;
 }
 
 const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServico }) => {
-  const { data: acompanhamento, isLoading } = useAcompanhamentoOS(ordemServico.id);
+  const { data: acompanhamento, isLoading, refetch } = useAcompanhamentoOS(ordemServico.id);
+  const { toast } = useToast();
 
   const getEtapaIcon = (nomeEtapa: string) => {
     switch (nomeEtapa.toLowerCase()) {
@@ -75,6 +80,59 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
     }
   };
 
+  const handleStatusChange = async (acompanhamentoId: string, newStatus: string) => {
+    try {
+      const updateData: any = {
+        status: newStatus
+      };
+
+      // Se mudou para "em-andamento" e não tem data_inicio, adiciona
+      if (newStatus === 'em-andamento') {
+        updateData.data_inicio = new Date().toISOString();
+      }
+
+      // Se mudou para "concluido", adiciona data_conclusao
+      if (newStatus === 'concluido') {
+        updateData.data_conclusao = new Date().toISOString();
+        // Se não tinha data_inicio, adiciona também
+        const currentItem = acompanhamento?.find(item => item.id === acompanhamentoId);
+        if (!currentItem?.data_inicio) {
+          updateData.data_inicio = new Date().toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('acompanhamento_os')
+        .update(updateData)
+        .eq('id', acompanhamentoId);
+
+      if (error) {
+        console.error('Erro ao atualizar status:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao atualizar status da etapa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Status da etapa atualizado com sucesso",
+      });
+
+      // Recarrega os dados
+      refetch();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar status da etapa",
+        variant: "destructive",
+      });
+    }
+  };
+
   const badgeStatus = getBadgeStatus(ordemServico.status);
 
   if (isLoading) {
@@ -133,12 +191,19 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
                   <h3 className="font-semibold text-gray-900">{item.etapas_producao.nome}</h3>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(item.status)}
-                    {item.status === 'em-andamento' && (
-                      <Badge className="bg-blue-500 text-white text-xs">Em Andamento</Badge>
-                    )}
-                    {item.status === 'concluido' && (
-                      <Badge className="bg-green-500 text-white text-xs">Concluído</Badge>
-                    )}
+                    <Select 
+                      value={item.status || 'pendente'} 
+                      onValueChange={(value) => handleStatusChange(item.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="em-andamento">Em Andamento</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <p className="text-gray-600 text-sm">{item.etapas_producao.descricao}</p>
