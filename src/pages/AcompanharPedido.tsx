@@ -2,44 +2,55 @@
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import OrderTracking from '@/components/OrderTracking';
+import AcompanhamentoPedido from '@/components/AcompanhamentoPedido';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Clock, CheckCircle, Truck } from 'lucide-react';
+import { useOrdenServico, useOrdensServico } from '@/hooks/useOrdenServico';
+import { Badge } from '@/components/ui/badge';
 
 const AcompanharPedido = () => {
   const [searchId, setSearchId] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-
-  // Dados de exemplo - em produção viriam do backend
-  const orders = [
-    {
-      id: 'OS-001',
-      cliente: 'João Silva',
-      status: 'em-andamento',
-      servico: 'Camisa Polo',
-      valor: 350.00
-    },
-    {
-      id: 'OS-002',
-      cliente: 'Maria Santos',
-      status: 'concluido',
-      servico: 'Vestido Bordado',
-      valor: 150.00
-    },
-    {
-      id: 'OS-003',
-      cliente: 'Pedro Costa',
-      status: 'entregue',
-      servico: 'Estampa Personalizada',
-      valor: 80.00
-    }
-  ];
+  const [searchAttempted, setSearchAttempted] = useState(false);
+  
+  const { data: selectedOrder, isLoading: isLoadingOrder } = useOrdenServico(searchId);
+  const { data: allOrders, isLoading: isLoadingAllOrders } = useOrdensServico();
 
   const handleSearch = () => {
-    const order = orders.find(o => o.id === searchId);
-    setSelectedOrder(order);
+    setSearchAttempted(true);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pendente':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'em-andamento':
+        return <Package className="h-4 w-4 text-blue-500" />;
+      case 'concluido':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'entregue':
+        return <Truck className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pendente':
+        return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
+      case 'em-andamento':
+        return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
+      case 'concluido':
+        return <Badge className="bg-green-500 text-white">Concluído</Badge>;
+      case 'entregue':
+        return <Badge className="bg-purple-500 text-white">Entregue</Badge>;
+      case 'cancelado':
+        return <Badge className="bg-red-500 text-white">Cancelado</Badge>;
+      default:
+        return <Badge className="bg-gray-500 text-white">Desconhecido</Badge>;
+    }
   };
 
   return (
@@ -63,15 +74,19 @@ const AcompanharPedido = () => {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Digite o número da OS (ex: OS-001)"
+                    placeholder="Digite o número da OS (ex: OS-2024-001)"
                     value={searchId}
                     onChange={(e) => setSearchId(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
-                <Button onClick={handleSearch} className="bg-brand-blue hover:bg-blue-600">
+                <Button 
+                  onClick={handleSearch} 
+                  className="bg-brand-blue hover:bg-blue-600"
+                  disabled={isLoadingOrder}
+                >
                   <Search className="h-4 w-4 mr-2" />
-                  Buscar
+                  {isLoadingOrder ? 'Buscando...' : 'Buscar'}
                 </Button>
               </div>
             </CardContent>
@@ -87,35 +102,85 @@ const AcompanharPedido = () => {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-600">OS</label>
-                      <p className="text-lg font-semibold text-brand-blue">{selectedOrder.id}</p>
+                      <p className="text-lg font-semibold text-brand-blue">{selectedOrder.numero_os}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Cliente</label>
-                      <p className="text-lg">{selectedOrder.cliente}</p>
+                      <p className="text-lg">{selectedOrder.clientes?.nome}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Serviço</label>
-                      <p className="text-lg">{selectedOrder.servico}</p>
+                      <label className="text-sm font-medium text-gray-600">Descrição</label>
+                      <p className="text-lg">{selectedOrder.descricao}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Valor</label>
-                      <p className="text-lg font-semibold">R$ {selectedOrder.valor.toFixed(2)}</p>
+                      <p className="text-lg font-semibold">R$ {selectedOrder.valor_total.toFixed(2)}</p>
                     </div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(selectedOrder.status)}
+                      {getStatusBadge(selectedOrder.status)}
+                    </div>
+                    {selectedOrder.data_prevista_entrega && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Previsão de Entrega</label>
+                        <p className="text-sm">{new Date(selectedOrder.data_prevista_entrega).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
-              <OrderTracking 
-                orderId={selectedOrder.id} 
-                currentStatus={selectedOrder.status}
-              />
+              <AcompanhamentoPedido ordemServico={selectedOrder} />
             </div>
           )}
 
-          {searchId && !selectedOrder && (
+          {searchAttempted && !selectedOrder && !isLoadingOrder && searchId && (
             <Card>
               <CardContent className="py-8 text-center">
                 <p className="text-gray-500">Nenhuma ordem de serviço encontrada com o ID: {searchId}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {!searchId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ordens de Serviço Recentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAllOrders ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Carregando ordens de serviço...</p>
+                  </div>
+                ) : allOrders && allOrders.length > 0 ? (
+                  <div className="space-y-3">
+                    {allOrders.slice(0, 5).map((order) => (
+                      <div 
+                        key={order.id} 
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSearchId(order.numero_os)}
+                      >
+                        <div className="flex items-center gap-4">
+                          {getStatusIcon(order.status)}
+                          <div>
+                            <p className="font-semibold text-brand-blue">{order.numero_os}</p>
+                            <p className="text-sm text-gray-600">{order.clientes?.nome}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          {getStatusBadge(order.status)}
+                          <p className="font-semibold">R$ {order.valor_total.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Nenhuma ordem de serviço encontrada</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

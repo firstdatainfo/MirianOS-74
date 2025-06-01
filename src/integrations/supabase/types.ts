@@ -9,7 +9,314 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      clientes: {
+        Row: {
+          ativo: boolean | null
+          cep: string | null
+          cidade: string | null
+          data_cadastro: string | null
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          nome: string
+          telefone: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cep?: string | null
+          cidade?: string | null
+          data_cadastro?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cep?: string | null
+          cidade?: string | null
+          data_cadastro?: string | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      configuracoes: {
+        Row: {
+          categoria: string
+          chave: string
+          descricao: string | null
+          id: string
+          valor: string
+        }
+        Insert: {
+          categoria: string
+          chave: string
+          descricao?: string | null
+          id?: string
+          valor: string
+        }
+        Update: {
+          categoria?: string
+          chave?: string
+          descricao?: string | null
+          id?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      itens_orcamento: {
+        Row: {
+          cor: string | null
+          descricao_personalizada: string | null
+          id: string
+          observacoes: string | null
+          orcamento_id: string | null
+          preco_total: number
+          preco_unitario: number
+          produto_id: string | null
+          quantidade: number
+          tamanho: string | null
+        }
+        Insert: {
+          cor?: string | null
+          descricao_personalizada?: string | null
+          id?: string
+          observacoes?: string | null
+          orcamento_id?: string | null
+          preco_total: number
+          preco_unitario: number
+          produto_id?: string | null
+          quantidade?: number
+          tamanho?: string | null
+        }
+        Update: {
+          cor?: string | null
+          descricao_personalizada?: string | null
+          id?: string
+          observacoes?: string | null
+          orcamento_id?: string | null
+          preco_total?: number
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade?: number
+          tamanho?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_orcamento_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_orcamento_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_ordem_servico: {
+        Row: {
+          cor: string | null
+          descricao_personalizada: string | null
+          id: string
+          observacoes: string | null
+          ordem_servico_id: string | null
+          preco_total: number
+          preco_unitario: number
+          produto_id: string | null
+          quantidade: number
+          status_item: string | null
+          tamanho: string | null
+        }
+        Insert: {
+          cor?: string | null
+          descricao_personalizada?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem_servico_id?: string | null
+          preco_total: number
+          preco_unitario: number
+          produto_id?: string | null
+          quantidade?: number
+          status_item?: string | null
+          tamanho?: string | null
+        }
+        Update: {
+          cor?: string | null
+          descricao_personalizada?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem_servico_id?: string | null
+          preco_total?: number
+          preco_unitario?: number
+          produto_id?: string | null
+          quantidade?: number
+          status_item?: string | null
+          tamanho?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_ordem_servico_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_ordem_servico_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orcamentos: {
+        Row: {
+          cliente_id: string | null
+          data_orcamento: string | null
+          data_validade: string | null
+          descricao: string | null
+          id: string
+          numero_orcamento: string
+          observacoes: string | null
+          status: string | null
+          valor_total: number
+        }
+        Insert: {
+          cliente_id?: string | null
+          data_orcamento?: string | null
+          data_validade?: string | null
+          descricao?: string | null
+          id?: string
+          numero_orcamento: string
+          observacoes?: string | null
+          status?: string | null
+          valor_total: number
+        }
+        Update: {
+          cliente_id?: string | null
+          data_orcamento?: string | null
+          data_validade?: string | null
+          descricao?: string | null
+          id?: string
+          numero_orcamento?: string
+          observacoes?: string | null
+          status?: string | null
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordens_servico: {
+        Row: {
+          cliente_id: string | null
+          data_criacao: string | null
+          data_entrega: string | null
+          data_prevista_entrega: string | null
+          descricao: string | null
+          id: string
+          numero_os: string
+          observacoes: string | null
+          orcamento_id: string | null
+          status: string | null
+          valor_total: number
+        }
+        Insert: {
+          cliente_id?: string | null
+          data_criacao?: string | null
+          data_entrega?: string | null
+          data_prevista_entrega?: string | null
+          descricao?: string | null
+          id?: string
+          numero_os: string
+          observacoes?: string | null
+          orcamento_id?: string | null
+          status?: string | null
+          valor_total: number
+        }
+        Update: {
+          cliente_id?: string | null
+          data_criacao?: string | null
+          data_entrega?: string | null
+          data_prevista_entrega?: string | null
+          descricao?: string | null
+          id?: string
+          numero_os?: string
+          observacoes?: string | null
+          orcamento_id?: string | null
+          status?: string | null
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_servico_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          ativo: boolean | null
+          categoria: string | null
+          data_criacao: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          preco_base: number
+          tempo_producao_dias: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
+          data_criacao?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          preco_base: number
+          tempo_producao_dias?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string | null
+          data_criacao?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          preco_base?: number
+          tempo_producao_dias?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
