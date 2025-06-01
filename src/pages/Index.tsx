@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -6,10 +5,8 @@ import DashboardCard from '@/components/DashboardCard';
 import ServiceOrderTable from '@/components/ServiceOrderTable';
 import QuickActions from '@/components/QuickActions';
 import { Users, ClipboardList, DollarSign, TrendingUp } from 'lucide-react';
-
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
+  return <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
       
       <div className="flex-1 flex flex-col">
@@ -18,34 +15,10 @@ const Index = () => {
         <main className="flex-1 p-6 space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <DashboardCard
-              title="Total de Clientes"
-              value="156"
-              change="+12.5%"
-              icon={Users}
-              trend="up"
-            />
-            <DashboardCard
-              title="Pedidos Ativos"
-              value="23"
-              change="+8.2%"
-              icon={ClipboardList}
-              trend="up"
-            />
-            <DashboardCard
-              title="Receita Mensal"
-              value="R$ 15.420"
-              change="+15.3%"
-              icon={DollarSign}
-              trend="up"
-            />
-            <DashboardCard
-              title="Taxa de Qualidade"
-              value="98.5%"
-              change="+2.1%"
-              icon={TrendingUp}
-              trend="up"
-            />
+            <DashboardCard title="Total de Clientes" value="156" change="+12.5%" icon={Users} trend="up" />
+            <DashboardCard title="Pedidos Ativos" value="23" change="+8.2%" icon={ClipboardList} trend="up" />
+            <DashboardCard title="Receita Mensal" value="R$ 15.420" change="+15.3%" icon={DollarSign} trend="up" />
+            <DashboardCard title="Taxa de Qualidade" value="98.5%" change="+2.1%" icon={TrendingUp} trend="up" />
           </div>
 
           {/* Main Content Grid */}
@@ -53,9 +26,7 @@ const Index = () => {
             <div className="lg:col-span-2">
               <ServiceOrderTable />
             </div>
-            <div>
-              <QuickActions />
-            </div>
+            
           </div>
 
           {/* Welcome Section */}
@@ -84,8 +55,6 @@ const Index = () => {
           </div>
         </main>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
