@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -10,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, UserPlus, Search, Edit, Trash2, Building2, User } from 'lucide-react';
+import { useInputMask } from '@/hooks/useInputMask';
 
 interface Cliente {
   id: string;
@@ -37,6 +37,8 @@ interface Cliente {
 }
 
 const Clientes = () => {
+  const { maskCEP, maskTelefone, maskRG, maskCNPJ, maskCPF } = useInputMask();
+  
   const [clientes, setClientes] = useState<Cliente[]>([
     {
       id: '1',
@@ -165,6 +167,30 @@ const Clientes = () => {
     setClientes(prev => prev.filter(cliente => cliente.id !== id));
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    let maskedValue = value;
+    
+    switch (field) {
+      case 'cep':
+        maskedValue = maskCEP(value);
+        break;
+      case 'telefone':
+        maskedValue = maskTelefone(value);
+        break;
+      case 'rg':
+        maskedValue = maskRG(value);
+        break;
+      case 'cnpj':
+        maskedValue = maskCNPJ(value);
+        break;
+      case 'cpf':
+        maskedValue = maskCPF(value);
+        break;
+    }
+    
+    setFormData({...formData, [field]: maskedValue});
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
@@ -228,7 +254,7 @@ const Clientes = () => {
                             <Input
                               id="cpf"
                               value={formData.cpf}
-                              onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                              onChange={(e) => handleInputChange('cpf', e.target.value)}
                               placeholder="000.000.000-00"
                               required
                             />
@@ -238,7 +264,7 @@ const Clientes = () => {
                             <Input
                               id="rg"
                               value={formData.rg}
-                              onChange={(e) => setFormData({...formData, rg: e.target.value})}
+                              onChange={(e) => handleInputChange('rg', e.target.value)}
                               placeholder="00.000.000-0"
                             />
                           </div>
@@ -256,7 +282,7 @@ const Clientes = () => {
                             <Input
                               id="telefone"
                               value={formData.telefone}
-                              onChange={(e) => setFormData({...formData, telefone: e.target.value})}
+                              onChange={(e) => handleInputChange('telefone', e.target.value)}
                               placeholder="(11) 99999-9999"
                               required
                             />
@@ -299,7 +325,7 @@ const Clientes = () => {
                             <Input
                               id="cnpj"
                               value={formData.cnpj}
-                              onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
+                              onChange={(e) => handleInputChange('cnpj', e.target.value)}
                               placeholder="00.000.000/0000-00"
                               required
                             />
@@ -325,7 +351,7 @@ const Clientes = () => {
                             <Input
                               id="telefone"
                               value={formData.telefone}
-                              onChange={(e) => setFormData({...formData, telefone: e.target.value})}
+                              onChange={(e) => handleInputChange('telefone', e.target.value)}
                               placeholder="(11) 99999-9999"
                               required
                             />
@@ -354,7 +380,7 @@ const Clientes = () => {
                         <Input
                           id="cep"
                           value={formData.cep}
-                          onChange={(e) => setFormData({...formData, cep: e.target.value})}
+                          onChange={(e) => handleInputChange('cep', e.target.value)}
                           placeholder="00000-000"
                         />
                       </div>
