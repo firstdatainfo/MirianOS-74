@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -5,8 +6,10 @@ import DashboardCard from '@/components/DashboardCard';
 import ServiceOrderTable from '@/components/ServiceOrderTable';
 import QuickActions from '@/components/QuickActions';
 import { Users, ClipboardList, DollarSign, TrendingUp } from 'lucide-react';
+
 const Index = () => {
-  return <div className="min-h-screen bg-gray-50 flex">
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
       
       <div className="flex-1 flex flex-col">
@@ -21,13 +24,8 @@ const Index = () => {
             <DashboardCard title="Taxa de Qualidade" value="98.5%" change="+2.1%" icon={TrendingUp} trend="up" />
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <ServiceOrderTable />
-            </div>
-            
-          </div>
+          {/* Service Order Table - Full Width */}
+          <ServiceOrderTable />
 
           {/* Welcome Section */}
           <div className="bg-gradient-brand rounded-xl p-8 text-white animate-fade-in">
@@ -55,6 +53,8 @@ const Index = () => {
           </div>
         </main>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
