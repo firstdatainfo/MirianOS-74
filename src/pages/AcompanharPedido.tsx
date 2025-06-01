@@ -110,7 +110,7 @@ const AcompanharPedido = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Descrição</label>
-                      <p className="text-lg">{selectedOrder.descricao}</p>
+                      <p className="text-lg">{selectedOrder.descricao || 'Não informado'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Valor</label>
@@ -128,6 +128,12 @@ const AcompanharPedido = () => {
                         <p className="text-sm">{new Date(selectedOrder.data_prevista_entrega).toLocaleDateString('pt-BR')}</p>
                       </div>
                     )}
+                    {selectedOrder.data_entrega && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Data de Entrega</label>
+                        <p className="text-sm">{new Date(selectedOrder.data_entrega).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -139,7 +145,7 @@ const AcompanharPedido = () => {
           {searchAttempted && !selectedOrder && !isLoadingOrder && searchId && (
             <Card>
               <CardContent className="py-8 text-center">
-                <p className="text-gray-500">Nenhuma ordem de serviço encontrada com o ID: {searchId}</p>
+                <p className="text-gray-500">Nenhuma ordem de serviço encontrada com o número: {searchId}</p>
               </CardContent>
             </Card>
           )}

@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      acompanhamento_os: {
+        Row: {
+          data_conclusao: string | null
+          data_criacao: string | null
+          data_inicio: string | null
+          etapa_id: string | null
+          id: string
+          observacoes: string | null
+          ordem_servico_id: string | null
+          status: string | null
+        }
+        Insert: {
+          data_conclusao?: string | null
+          data_criacao?: string | null
+          data_inicio?: string | null
+          etapa_id?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem_servico_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          data_conclusao?: string | null
+          data_criacao?: string | null
+          data_inicio?: string | null
+          etapa_id?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem_servico_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acompanhamento_os_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "etapas_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acompanhamento_os_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           ativo: boolean | null
@@ -69,6 +117,33 @@ export type Database = {
           descricao?: string | null
           id?: string
           valor?: string
+        }
+        Relationships: []
+      }
+      etapas_producao: {
+        Row: {
+          ativo: boolean | null
+          data_criacao: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          data_criacao?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem: number
+        }
+        Update: {
+          ativo?: boolean | null
+          data_criacao?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
         }
         Relationships: []
       }

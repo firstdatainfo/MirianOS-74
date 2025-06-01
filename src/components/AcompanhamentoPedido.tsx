@@ -4,89 +4,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, AlertCircle, Truck, Package, Scissors, Shirt, Palette, Wrench } from 'lucide-react';
 import { OrdemServico } from '@/hooks/useOrdenServico';
-
-interface EtapaAcompanhamento {
-  id: string;
-  titulo: string;
-  descricao: string;
-  status: 'concluido' | 'atual' | 'pendente';
-  timestamp?: string;
-  icon: React.ReactNode;
-}
+import { useAcompanhamentoOS } from '@/hooks/useEtapasProducao';
 
 interface AcompanhamentoPedidoProps {
   ordemServico: OrdemServico;
 }
 
 const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServico }) => {
-  const getEtapasAcompanhamento = (status: string): EtapaAcompanhamento[] => {
-    const dataBase = new Date(ordemServico.data_criacao);
-    
-    const etapas: EtapaAcompanhamento[] = [
-      {
-        id: 'recebido',
-        titulo: 'Pedido Recebido',
-        descricao: 'Seu pedido foi recebido e está na fila de produção',
-        status: 'concluido',
-        timestamp: dataBase.toLocaleDateString('pt-BR'),
-        icon: <Package className="h-5 w-5" />
-      },
-      {
-        id: 'cortando',
-        titulo: 'Corte',
-        descricao: 'Peça sendo cortada conforme especificações',
-        status: status === 'pendente' ? 'pendente' : 'concluido',
-        timestamp: status !== 'pendente' ? new Date(dataBase.getTime() + 24*60*60*1000).toLocaleDateString('pt-BR') : undefined,
-        icon: <Scissors className="h-5 w-5" />
-      },
-      {
-        id: 'estampando',
-        titulo: 'Estampa/Bordado',
-        descricao: 'Aplicação de estampas ou bordados personalizados',
-        status: status === 'pendente' ? 'pendente' : 
-               status === 'em-andamento' ? 'atual' : 'concluido',
-        timestamp: status === 'concluido' || status === 'entregue' ? 
-          new Date(dataBase.getTime() + 2*24*60*60*1000).toLocaleDateString('pt-BR') : undefined,
-        icon: <Palette className="h-5 w-5" />
-      },
-      {
-        id: 'costurando',
-        titulo: 'Costura',
-        descricao: 'Montagem e costura das peças',
-        status: status === 'concluido' || status === 'entregue' ? 'concluido' : 
-               status === 'em-andamento' ? 'atual' : 'pendente',
-        timestamp: status === 'concluido' || status === 'entregue' ? 
-          new Date(dataBase.getTime() + 3*24*60*60*1000).toLocaleDateString('pt-BR') : undefined,
-        icon: <Shirt className="h-5 w-5" />
-      },
-      {
-        id: 'acabamento',
-        titulo: 'Acabamento',
-        descricao: 'Acabamentos finais e controle de qualidade',
-        status: status === 'concluido' || status === 'entregue' ? 'concluido' : 'pendente',
-        timestamp: status === 'concluido' || status === 'entregue' ? 
-          new Date(dataBase.getTime() + 4*24*60*60*1000).toLocaleDateString('pt-BR') : undefined,
-        icon: <Wrench className="h-5 w-5" />
-      },
-      {
-        id: 'pronto',
-        titulo: 'Pronto para Entrega',
-        descricao: 'Pedido finalizado e pronto para retirada',
-        status: status === 'entregue' ? 'concluido' : 'pendente',
-        timestamp: status === 'entregue' && ordemServico.data_entrega ? 
-          new Date(ordemServico.data_entrega).toLocaleDateString('pt-BR') : undefined,
-        icon: <CheckCircle className="h-5 w-5" />
-      }
-    ];
+  const { data: acompanhamento, isLoading } = useAcompanhamentoOS(ordemServico.id);
 
-    return etapas;
+  const getEtapaIcon = (nomeEtapa: string) => {
+    switch (nomeEtapa.toLowerCase()) {
+      case 'recebido':
+        return <Package className="h-5 w-5" />;
+      case 'corte':
+        return <Scissors className="h-5 w-5" />;
+      case 'estampa/bordado':
+        return <Palette className="h-5 w-5" />;
+      case 'costura':
+        return <Shirt className="h-5 w-5" />;
+      case 'acabamento':
+        return <Wrench className="h-5 w-5" />;
+      case 'pronto':
+        return <CheckCircle className="h-5 w-5" />;
+      default:
+        return <Package className="h-5 w-5" />;
+    }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'concluido':
         return <CheckCircle className="h-6 w-6 text-green-500" />;
-      case 'atual':
+      case 'em-andamento':
         return <Clock className="h-6 w-6 text-blue-500 animate-pulse" />;
       case 'pendente':
         return <AlertCircle className="h-6 w-6 text-gray-300" />;
@@ -99,7 +49,7 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
     switch (status) {
       case 'concluido':
         return 'bg-green-100 border-green-300';
-      case 'atual':
+      case 'em-andamento':
         return 'bg-blue-100 border-blue-300 shadow-md';
       case 'pendente':
         return 'bg-gray-50 border-gray-200';
@@ -125,8 +75,27 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
     }
   };
 
-  const etapas = getEtapasAcompanhamento(ordemServico.status);
   const badgeStatus = getBadgeStatus(ordemServico.status);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-gray-500">Carregando acompanhamento...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!acompanhamento || acompanhamento.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-gray-500">Nenhum acompanhamento encontrado para esta ordem de serviço.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -146,36 +115,48 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {etapas.map((etapa, index) => (
-            <div key={etapa.id} className="flex items-start gap-4">
+          {acompanhamento.map((item, index) => (
+            <div key={item.id} className="flex items-start gap-4">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-gray-200">
-                  {etapa.icon}
+                  {getEtapaIcon(item.etapas_producao.nome)}
                 </div>
-                {index < etapas.length - 1 && (
+                {index < acompanhamento.length - 1 && (
                   <div className={`w-0.5 h-12 mt-2 ${
-                    etapa.status === 'concluido' ? 'bg-green-300' : 'bg-gray-200'
+                    item.status === 'concluido' ? 'bg-green-300' : 'bg-gray-200'
                   }`} />
                 )}
               </div>
               
-              <div className={`flex-1 p-4 rounded-lg border-2 ${getStatusColor(etapa.status)}`}>
+              <div className={`flex-1 p-4 rounded-lg border-2 ${getStatusColor(item.status)}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{etapa.titulo}</h3>
+                  <h3 className="font-semibold text-gray-900">{item.etapas_producao.nome}</h3>
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(etapa.status)}
-                    {etapa.status === 'atual' && (
+                    {getStatusIcon(item.status)}
+                    {item.status === 'em-andamento' && (
                       <Badge className="bg-blue-500 text-white text-xs">Em Andamento</Badge>
                     )}
-                    {etapa.status === 'concluido' && (
+                    {item.status === 'concluido' && (
                       <Badge className="bg-green-500 text-white text-xs">Concluído</Badge>
                     )}
                   </div>
                 </div>
-                <p className="text-gray-600 text-sm">{etapa.descricao}</p>
-                {etapa.timestamp && (
-                  <p className="text-xs text-gray-500 mt-1">{etapa.timestamp}</p>
-                )}
+                <p className="text-gray-600 text-sm">{item.etapas_producao.descricao}</p>
+                <div className="mt-2 space-y-1">
+                  {item.data_inicio && (
+                    <p className="text-xs text-gray-500">
+                      Iniciado: {new Date(item.data_inicio).toLocaleDateString('pt-BR')} às {new Date(item.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                  {item.data_conclusao && (
+                    <p className="text-xs text-gray-500">
+                      Concluído: {new Date(item.data_conclusao).toLocaleDateString('pt-BR')} às {new Date(item.data_conclusao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                  {item.observacoes && (
+                    <p className="text-xs text-blue-600 italic">Obs: {item.observacoes}</p>
+                  )}
+                </div>
               </div>
             </div>
           ))}
