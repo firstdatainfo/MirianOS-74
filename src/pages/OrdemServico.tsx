@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import BuscaCliente from '@/components/BuscaCliente';
+import { useConfiguracoes } from '@/hooks/useConfiguracoes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ClipboardList, Plus, Search, Edit, Eye, X } from 'lucide-react';
+import { ClipboardList, Plus, Search, Edit, Eye, X, User, Phone, Mail, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Cliente {
   id: string;
@@ -35,15 +37,18 @@ interface OrdemServico {
     costura: string;
   };
   tipo: {
-    manga: 'OR' | 'normal';
-    barra: 'silk' | 'sub';
-    gola: 'redondo' | 'polo';
+    manga: string;
+    barra: string;
+    gola: string;
   };
-  qualidade: 'M' | 'G' | 'P';
+  manga: string;
+  barra: string;
+  gola: string;
+  qualidade: string;
   precoUnitario: number;
   tipoTecido: string;
   apresentar: boolean;
-  tamanho: 'M' | 'G' | 'P';
+  tamanho: string;
   quantidade: number;
   acabamento: string;
   valor: number;
@@ -68,6 +73,9 @@ const OrdemServico = () => {
       barra: 'silk',
       gola: 'polo'
     },
+    manga: 'OR',
+    barra: 'silk',
+    gola: 'polo',
     qualidade: 'M',
     precoUnitario: 35.00,
     tipoTecido: 'Algodão',
@@ -84,14 +92,15 @@ const OrdemServico = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [buscaOrdens, setBuscaOrdens] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<OrdemServico | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const { toast } = useToast();
-
-  const [formData, setFormData] = useState({
+  const { configs, loading: loadingConfigs, reload: reloadConfigs } = useConfiguracoes();
+  
+  // Recarregar configurações quando o componente for montado
+  useEffect(() => {
+    reloadConfigs();
+  }, [reloadConfigs]);
+  const initialFormData = {
     cliente: '',
-    entrada: '',
+    entrada: new Date().toISOString().split('T')[0],
     saida: '',
     observacoes: '',
     pedido: {
@@ -100,18 +109,28 @@ const OrdemServico = () => {
       costura: ''
     },
     tipo: {
-      manga: 'normal' as 'OR' | 'normal',
-      barra: 'silk' as 'silk' | 'sub',
-      gola: 'redondo' as 'redondo' | 'polo'
+      manga: '',
+      barra: '',
+      gola: ''
     },
-    qualidade: 'M' as 'M' | 'G' | 'P',
+    manga: '',
+    barra: '',
+    gola: '',
+    qualidade: '',
     precoUnitario: 0,
     tipoTecido: '',
     apresentar: false,
-    tamanho: 'M' as 'M' | 'G' | 'P',
+    tamanho: '',
     quantidade: 1,
-    acabamento: ''
-  });
+    acabamento: '',
+    valor: 0
+  };
+
+  const [formData, setFormData] = useState<Omit<OrdemServico, 'id' | 'dataCriacao' | 'status'>>(initialFormData);
+  const [selectedOrder, setSelectedOrder] = useState<OrdemServico | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleClienteSelecionado = (cliente: Cliente) => {
     setClienteSelecionado(cliente);
@@ -171,27 +190,8 @@ const OrdemServico = () => {
 
   const resetForm = () => {
     setFormData({
-      cliente: '',
-      entrada: '',
-      saida: '',
-      observacoes: '',
-      pedido: {
-        corte: '',
-        estampa: '',
-        costura: ''
-      },
-      tipo: {
-        manga: 'normal',
-        barra: 'silk',
-        gola: 'redondo'
-      },
-      qualidade: 'M',
-      precoUnitario: 0,
-      tipoTecido: '',
-      apresentar: false,
-      tamanho: 'M',
-      quantidade: 1,
-      acabamento: ''
+      ...initialFormData,
+      entrada: new Date().toISOString().split('T')[0]
     });
     setShowForm(false);
     setEditingId(null);
@@ -199,27 +199,59 @@ const OrdemServico = () => {
     setSelectedOrder(null);
   };
 
-  const handleView = (ordem: OrdemServico) => {
-    setSelectedOrder(ordem);
-    setIsViewDialogOpen(true);
+  const handleView = async (ordem: OrdemServico) => {
+    try {
+      // Buscar os dados completos do cliente se não estiverem disponíveis
+      if (!clienteSelecionado || clienteSelecionado.nome !== ordem.cliente) {
+        const { data: cliente } = await supabase
+          .from('clientes')
+          .select('*')
+          .eq('nome', ordem.cliente)
+          .single();
+        
+        if (cliente) {
+          setClienteSelecionado(cliente);
+        }
+      }
+      
+      setSelectedOrder(ordem);
+      setIsViewDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao buscar dados do cliente:', error);
+      // Mesmo em caso de erro, ainda mostra o pedido com os dados básicos
+      setSelectedOrder(ordem);
+      setIsViewDialogOpen(true);
+    }
   };
 
   const handleEdit = (ordem: OrdemServico) => {
-    setSelectedOrder(ordem);
     setFormData({
+      ...initialFormData,
       cliente: ordem.cliente,
       entrada: ordem.entrada,
       saida: ordem.saida,
       observacoes: ordem.observacoes,
-      pedido: ordem.pedido,
-      tipo: ordem.tipo,
+      pedido: {
+        corte: ordem.pedido.corte,
+        estampa: ordem.pedido.estampa,
+        costura: ordem.pedido.costura
+      },
+      tipo: {
+        manga: ordem.tipo.manga,
+        barra: ordem.tipo.barra,
+        gola: ordem.tipo.gola
+      },
+      manga: ordem.manga,
+      barra: ordem.barra,
+      gola: ordem.gola,
       qualidade: ordem.qualidade,
       precoUnitario: ordem.precoUnitario,
       tipoTecido: ordem.tipoTecido,
       apresentar: ordem.apresentar,
       tamanho: ordem.tamanho,
       quantidade: ordem.quantidade,
-      acabamento: ordem.acabamento
+      acabamento: ordem.acabamento,
+      valor: ordem.valor
     });
     setEditingId(ordem.id);
     setIsEditDialogOpen(true);
@@ -285,7 +317,8 @@ const OrdemServico = () => {
               onClick={() => setShowForm(true)} 
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white 
                         shadow-neon-primary/30 hover:shadow-neon-primary/50 transition-all duration-300
-                        group flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg"
+                        group flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg
+                        fixed bottom-4 right-4 z-50"
             >
               <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
               <span>Nova OS</span>
@@ -413,45 +446,68 @@ const OrdemServico = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="manga">Tipo de Manga</Label>
-                        <select 
-                          id="manga" 
-                          className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" 
-                          value={formData.tipo.manga} 
+                        <select
+                          id="manga"
+                          value={formData.tipo.manga}
                           onChange={e => setFormData({
-                      ...formData,
-                      tipo: {
-                        ...formData.tipo,
-                        manga: e.target.value as 'OR' | 'normal'
-                      }
-                    })}>
-                          <option value="normal">Normal</option>
-                          <option value="OR">OR</option>
+                            ...formData,
+                            tipo: {
+                              ...formData.tipo,
+                              manga: e.target.value
+                            }
+                          })}
+                          className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Selecione...</option>
+                          {configs.tiposManga?.map((tipo) => (
+                            <option key={tipo.id} value={tipo.value}>
+                              {tipo.value}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
                         <Label htmlFor="barra">Tipo de Barra</Label>
-                        <select id="barra" className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md" value={formData.tipo.barra} onChange={e => setFormData({
-                      ...formData,
-                      tipo: {
-                        ...formData.tipo,
-                        barra: e.target.value as 'silk' | 'sub'
-                      }
-                    })}>
-                          <option value="silk">Silk</option>
-                          <option value="sub">Sub</option>
+                        <select
+                          id="barra"
+                          value={formData.tipo.barra}
+                          onChange={e => setFormData({
+                            ...formData,
+                            tipo: {
+                              ...formData.tipo,
+                              barra: e.target.value
+                            }
+                          })}
+                          className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Selecione...</option>
+                          {configs.tiposBarra?.map((tipo) => (
+                            <option key={tipo.id} value={tipo.value}>
+                              {tipo.value}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
                         <Label htmlFor="gola">Tipo de Gola</Label>
-                        <select id="gola" className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md" value={formData.tipo.gola} onChange={e => setFormData({
-                      ...formData,
-                      tipo: {
-                        ...formData.tipo,
-                        gola: e.target.value as 'redondo' | 'polo'
-                      }
-                    })}>
-                          <option value="redondo">Redondo</option>
-                          <option value="polo">Polo</option>
+                        <select
+                          id="gola"
+                          value={formData.tipo.gola}
+                          onChange={e => setFormData({
+                            ...formData,
+                            tipo: {
+                              ...formData.tipo,
+                              gola: e.target.value
+                            }
+                          })}
+                          className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Selecione...</option>
+                          {configs.tiposGola?.map((tipo) => (
+                            <option key={tipo.id} value={tipo.value}>
+                              {tipo.value}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -461,20 +517,40 @@ const OrdemServico = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="tipoTecido">Tipo de Tecido</Label>
-                      <Input id="tipoTecido" value={formData.tipoTecido} onChange={e => setFormData({
-                    ...formData,
-                    tipoTecido: e.target.value
-                  })} />
+                      <select
+                        id="tipoTecido"
+                        value={formData.tipoTecido}
+                        onChange={e => setFormData({
+                          ...formData,
+                          tipoTecido: e.target.value
+                        })}
+                        className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Selecione...</option>
+                        {configs.tiposTecido?.map((tipo) => (
+                          <option key={tipo.id} value={tipo.value}>
+                            {tipo.value}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label htmlFor="tamanho">Tamanho</Label>
-                      <select id="tamanho" className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md" value={formData.tamanho} onChange={e => setFormData({
-                    ...formData,
-                    tamanho: e.target.value as 'M' | 'G' | 'P'
-                  })}>
-                        <option value="P">P</option>
-                        <option value="M">M</option>
-                        <option value="G">G</option>
+                      <select
+                        id="tamanho"
+                        value={formData.tamanho}
+                        onChange={e => setFormData({
+                          ...formData,
+                          tamanho: e.target.value
+                        })}
+                        className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Selecione...</option>
+                        {configs.tamanhos?.map((tamanho) => (
+                          <option key={tamanho.id} value={tamanho.value}>
+                            {tamanho.value}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -658,10 +734,45 @@ const OrdemServico = () => {
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Informações do Cliente</h3>
-                  <p><strong>Nome:</strong> {selectedOrder.cliente}</p>
+                  <h3 className="font-semibold text-gray-700 mb-3 text-lg">Informações do Cliente</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <p className="flex items-center">
+                        <User className="h-4 w-4 mr-2 text-blue-500" />
+                        <span><strong>Nome:</strong> {selectedOrder.cliente}</span>
+                      </p>
+                      {clienteSelecionado?.telefone && (
+                        <p className="flex items-center">
+                          <Phone className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>Telefone:</strong> {clienteSelecionado.telefone}</span>
+                        </p>
+                      )}
+                      {clienteSelecionado?.email && (
+                        <p className="flex items-center">
+                          <Mail className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>E-mail:</strong> {clienteSelecionado.email}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {(clienteSelecionado?.endereco || clienteSelecionado?.cidade || clienteSelecionado?.estado || clienteSelecionado?.cep) && (
+                        <div className="flex items-start">
+                          <MapPin className="h-4 w-4 mr-2 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p><strong>Endereço:</strong></p>
+                            {clienteSelecionado.endereco && <p>{clienteSelecionado.endereco}</p>}
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {clienteSelecionado.cidade && <span>{clienteSelecionado.cidade}</span>}
+                              {clienteSelecionado.estado && <span>{clienteSelecionado.estado}</span>}
+                              {clienteSelecionado.cep && <span>CEP: {clienteSelecionado.cep}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-2">Detalhes da Ordem</h3>

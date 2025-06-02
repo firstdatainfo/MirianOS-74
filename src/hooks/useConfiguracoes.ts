@@ -40,29 +40,58 @@ export function useConfiguracoes() {
       setLoading(true);
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('*');
+        .select('*')
+        .order('valor', { ascending: true }); // Ordena os itens
 
       if (error) throw error;
 
-      // Transforma os dados do banco no formato esperado pelo estado
-      const formattedData = data.reduce((acc: ConfigState, item) => {
-        const categoria = item.categoria as ConfigCategory;
-        if (!acc[categoria]) {
-          acc[categoria] = [];
-        }
-        acc[categoria].push({
-          id: item.id,
-          value: item.valor
-        });
-        return acc;
-      }, {} as ConfigState);
+      // Inicializa o estado com arrays vazios para todas as categorias
+      const initialState: ConfigState = {
+        qualidades: [],
+        tiposManga: [],
+        tiposBarra: [],
+        tiposGola: [],
+        tiposTecido: [],
+        tamanhos: []
+      };
 
+      // Preenche os arrays com os dados do banco
+      const normalizarCategoria = (categoria: string): string => {
+        // Remove underscores e converte para lowercase
+        const normalizada = categoria.toLowerCase().replace(/_/g, '');
+        
+        // Mapeamento de categorias
+        const mapeamento: { [key: string]: string } = {
+          'tiposmanga': 'tiposManga',
+          'tiposbarra': 'tiposBarra',
+          'tiposgola': 'tiposGola',
+          'tipostecido': 'tiposTecido',
+          'qualidades': 'qualidades',
+          'tamanhos': 'tamanhos'
+        };
+        
+        return mapeamento[normalizada] || normalizada;
+      };
+
+      const formattedData = data.reduce((acc, item) => {
+        const categoria = normalizarCategoria(item.categoria) as ConfigCategory;
+        if (acc[categoria]) {
+          acc[categoria].push({
+            id: item.id,
+            value: item.valor
+          });
+        }
+        return acc;
+      }, { ...initialState });
+
+      console.log('Dados formatados:', formattedData);
       setConfigs(formattedData);
       setError(null);
+      return formattedData; // Retorna os dados para uso imediato se necessário
     } catch (err) {
       console.error('Erro ao carregar configurações:', err);
       setError('Erro ao carregar configurações');
-      window.alert('Erro ao carregar configurações. Por favor, tente novamente.');
+      throw err; // Propaga o erro para quem chamou
     } finally {
       setLoading(false);
     }
@@ -87,20 +116,13 @@ export function useConfiguracoes() {
       
       if (data && data[0]) {
         const newItem = data[0];
-        setConfigs(prev => ({
-          ...prev,
-          [category]: [
-            ...(prev[category] || []),
-            { id: newItem.id, value: newItem.valor }
-          ]
-        }));
-        window.alert('Item adicionado com sucesso!');
+        // Não atualizamos o estado local aqui, vamos confiar no reload
         return true;
       }
+      return false;
     } catch (err) {
       console.error('Erro ao adicionar item:', err);
-      window.alert('Erro ao adicionar item. Por favor, tente novamente.');
-      return false;
+      throw err; // Propagar o erro para ser tratado no componente
     }
   };
 

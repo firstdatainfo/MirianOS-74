@@ -48,38 +48,28 @@ const Configuracoes = () => {
     tamanhos: false
   });
 
-  const handleAddItem = async (category: ConfigCategory) => {
-    const value = localValues[category].trim();
-    if (!value) {
-      window.alert('Por favor, digite um valor');
-      return;
-    }
+  const handleAddItem = async (category: ConfigCategory, valueToAdd?: string) => {
+    const value = (valueToAdd || localValues[category]).trim();
+    if (!value) return;
 
     try {
       setIsAdding(prev => ({ ...prev, [category]: true }));
-      const success = await addItem(category, value);
-      if (success) {
-        window.alert('Item adicionado com sucesso!');
-        setLocalValues(prev => ({ ...prev, [category]: '' }));
-      }
+      await addItem(category, value);
+      setLocalValues(prev => ({ ...prev, [category]: '' }));
+      await reload(); // Recarregar configurações após adicionar
     } catch (error) {
       console.error('Erro ao adicionar item:', error);
-      window.alert('Erro ao adicionar item. Por favor, tente novamente.');
     } finally {
       setIsAdding(prev => ({ ...prev, [category]: false }));
     }
   };
 
   const handleRemoveItem = async (category: ConfigCategory, id: string, value: string) => {
-    if (!window.confirm(`Tem certeza que deseja remover "${value}"?\n\nEsta ação não pode ser desfeita.`)) {
-      return;
-    }
 
     try {
       await removeItem(category, id);
     } catch (error) {
       console.error('Erro ao remover item:', error);
-      window.alert('Erro ao remover item. Por favor, tente novamente.');
     }
   };
 
@@ -128,8 +118,10 @@ const Configuracoes = () => {
             </div>
             <Button 
               onClick={() => {
-                setLocalValue('');
-                handleAddItem(category);
+                if (localValue.trim()) {
+                  handleAddItem(category, localValue);
+                  setLocalValue('');
+                }
               }}
               disabled={!localValue.trim() || isAdding[category]}
               className="shrink-0 h-auto py-1.5 px-3 flex flex-col items-center"
