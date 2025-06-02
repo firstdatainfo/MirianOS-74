@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { enviarOrcamento, getProximaOS } from '@/services/orcamentoService';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
