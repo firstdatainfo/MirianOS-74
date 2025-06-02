@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Garantir que os gradientes fiquem fixos */
+.bg-fixed {
+  background-attachment: fixed;
+  background-size: 200% 200%;
+  background-position: 0% 0%;
+  transition: background-position 0.3s ease;
+}
+
+/* Efeito hover para os botões com gradiente */
+.hover\:bg-right:hover {
+  background-position: 100% 100%;
+}
+
+/* Garantir que os botões tenham um fundo fixo */
+button {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

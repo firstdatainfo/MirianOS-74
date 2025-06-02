@@ -1,60 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Plus, Trash2 } from 'lucide-react';
+import { Settings, Plus, Trash2, Check, X, Loader2 } from 'lucide-react';
+// Removida importação do toast, usando alertas do sistema
+import { useConfiguracoes } from '@/hooks/useConfiguracoes';
+
+type ConfigCategory = 'qualidades' | 'tiposManga' | 'tiposBarra' | 'tiposGola' | 'tiposTecido' | 'tamanhos';
 
 interface ConfigItem {
   id: string;
   value: string;
-}
-
-interface Configs {
-  qualidades: ConfigItem[];
-  tiposManga: ConfigItem[];
-  tiposBarra: ConfigItem[];
-  tiposGola: ConfigItem[];
-  tiposTecido: ConfigItem[];
-  tamanhos: ConfigItem[];
+  categoria?: string;
+  chave?: string;
+  descricao?: string | null;
 }
 
 const Configuracoes = () => {
-  const [configs, setConfigs] = useState<Configs>({
-    qualidades: [
-      { id: '1', value: 'M' },
-      { id: '2', value: 'G' },
-      { id: '3', value: 'P' }
-    ],
-    tiposManga: [
-      { id: '1', value: 'Normal' },
-      { id: '2', value: 'OR' }
-    ],
-    tiposBarra: [
-      { id: '1', value: 'Silk' },
-      { id: '2', value: 'Sub' }
-    ],
-    tiposGola: [
-      { id: '1', value: 'Redondo' },
-      { id: '2', value: 'Polo' }
-    ],
-    tiposTecido: [
-      { id: '1', value: 'Algodão' },
-      { id: '2', value: 'Poliéster' },
-      { id: '3', value: 'Viscose' }
-    ],
-    tamanhos: [
-      { id: '1', value: 'P' },
-      { id: '2', value: 'M' },
-      { id: '3', value: 'G' },
-      { id: '4', value: 'GG' }
-    ]
-  });
+  const {
+    configs,
+    loading,
+    error,
+    addItem,
+    removeItem,
+    reload
+  } = useConfiguracoes();
 
-  const [newValues, setNewValues] = useState({
+  const [localValues, setLocalValues] = useState<Record<ConfigCategory, string>>({
     qualidades: '',
     tiposManga: '',
     tiposBarra: '',
@@ -63,71 +39,166 @@ const Configuracoes = () => {
     tamanhos: ''
   });
 
-  const addItem = (category: keyof Configs) => {
-    const value = newValues[category].trim();
-    if (value) {
-      const newItem: ConfigItem = {
-        id: Date.now().toString(),
-        value
-      };
-      setConfigs(prev => ({
-        ...prev,
-        [category]: [...prev[category], newItem]
-      }));
-      setNewValues(prev => ({ ...prev, [category]: '' }));
+  const [isAdding, setIsAdding] = useState<Record<ConfigCategory, boolean>>({
+    qualidades: false,
+    tiposManga: false,
+    tiposBarra: false,
+    tiposGola: false,
+    tiposTecido: false,
+    tamanhos: false
+  });
+
+  const handleAddItem = async (category: ConfigCategory) => {
+    const value = localValues[category].trim();
+    if (!value) {
+      window.alert('Por favor, digite um valor');
+      return;
+    }
+
+    try {
+      setIsAdding(prev => ({ ...prev, [category]: true }));
+      const success = await addItem(category, value);
+      if (success) {
+        window.alert('Item adicionado com sucesso!');
+        setLocalValues(prev => ({ ...prev, [category]: '' }));
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar item:', error);
+      window.alert('Erro ao adicionar item. Por favor, tente novamente.');
+    } finally {
+      setIsAdding(prev => ({ ...prev, [category]: false }));
     }
   };
 
-  const removeItem = (category: keyof Configs, id: string) => {
-    setConfigs(prev => ({
-      ...prev,
-      [category]: prev[category].filter(item => item.id !== id)
-    }));
+  const handleRemoveItem = async (category: ConfigCategory, id: string, value: string) => {
+    if (!window.confirm(`Tem certeza que deseja remover "${value}"?\n\nEsta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      await removeItem(category, id);
+    } catch (error) {
+      console.error('Erro ao remover item:', error);
+      window.alert('Erro ao remover item. Por favor, tente novamente.');
+    }
   };
 
-  const ConfigSection = ({ 
-    title, 
-    category, 
-    items 
-  }: { 
-    title: string; 
-    category: keyof Configs; 
-    items: ConfigItem[] 
-  }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder={`Novo ${title.toLowerCase()}`}
-            value={newValues[category]}
-            onChange={(e) => setNewValues(prev => ({ ...prev, [category]: e.target.value }))}
-            onKeyPress={(e) => e.key === 'Enter' && addItem(category)}
-          />
-          <Button onClick={() => addItem(category)}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {items.map(item => (
-            <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-              <span>{item.value}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeItem(category, item.id)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+  const ConfigSection = ({
+    title,
+    category,
+    items = []
+  }: {
+    title: string;
+    category: ConfigCategory;
+    items: ConfigItem[];
+  }) => {
+    const [localValue, setLocalValue] = useState('');
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && localValue.trim()) {
+        handleAddItem(category);
+      }
+    };
+
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col">
+          <div className="flex gap-2 mb-4">
+            <div className="relative flex-1">
+              <Input
+                placeholder={`Adicionar ${title.toLowerCase()}`}
+                value={localValue}
+                onChange={(e) => setLocalValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="pr-10"
+                disabled={isAdding[category]}
+              />
+              {localValue && (
+                <button
+                  onClick={() => setLocalValue('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  disabled={isAdding[category]}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
+            <Button 
+              onClick={() => {
+                setLocalValue('');
+                handleAddItem(category);
+              }}
+              disabled={!localValue.trim() || isAdding[category]}
+              className="shrink-0 h-auto py-1.5 px-3 flex flex-col items-center"
+              size="sm"
+            >
+              {isAdding[category] ? (
+                <Loader2 className="h-4 w-4 mb-0.5 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mb-0.5" />
+                  <span className="text-xs leading-none">Adicionar</span>
+                </>
+              )}
+            </Button>
+          </div>
+          
+          <div className="border rounded-lg overflow-hidden flex-1">
+            {loading ? (
+              <div className="h-full flex items-center justify-center p-6">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : error ? (
+              <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                <p className="text-red-500 text-sm mb-2">Erro ao carregar itens</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={reload}
+                  className="text-xs"
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : items.length > 0 ? (
+              <div className="divide-y">
+                {items.map(item => (
+                  <div 
+                    key={item.id} 
+                    className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <Check className="h-4 w-4 text-green-500 mr-2" />
+                      <span className="font-medium">{item.value}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveItem(category, item.id, item.value)}
+                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                      title="Remover item"
+                      disabled={isAdding[category]}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center p-6 text-center">
+                <p className="text-gray-500 text-sm">
+                  Nenhum item cadastrado. Adicione um novo item acima.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

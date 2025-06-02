@@ -13,9 +13,9 @@ const Header = () => {
   const notificacaoNaoLidas = notificacoes.filter(n => !n.lida).length;
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <header className="bg-gradient-to-b from-white to-gray-50 border-b border-white/20 backdrop-blur-sm px-6 py-4 flex items-center justify-between shadow-sm relative z-50">
       <div className="flex items-center space-x-4">
-        <h1 className="text-2xl font-bold bg-gradient-brand bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent animate-glow">
           ServicePro
         </h1>
       </div>
@@ -25,7 +25,7 @@ const Header = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input 
             placeholder="Buscar clientes, pedidos..." 
-            className="pl-10 bg-gray-50 border-0 focus:bg-white transition-colors"
+            className="pl-10 bg-white/50 border border-white/20 focus:bg-white focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
           />
         </div>
       </div>
@@ -35,20 +35,20 @@ const Header = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="relative"
+            className="relative hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
             onClick={() => setMostrarNotificacoes(!mostrarNotificacoes)}
           >
             <Bell className="h-5 w-5" />
             {notificacaoNaoLidas > 0 && (
-              <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center p-0 min-w-[20px]">
+              <Badge className="absolute -top-1 -right-1 bg-gradient-danger text-white text-xs rounded-full h-5 w-5 flex items-center justify-center p-0 min-w-[20px] shadow-neon-danger/30 animate-pulse-slow">
                 {notificacaoNaoLidas > 9 ? '9+' : notificacaoNaoLidas}
               </Badge>
             )}
           </Button>
           
           {mostrarNotificacoes && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-4 border-b border-gray-200">
+            <div className="absolute right-0 mt-2 w-80 bg-gradient-to-b from-white to-gray-50 border border-white/20 rounded-lg shadow-neon-primary/10 backdrop-blur-sm z-50 max-h-96 overflow-y-auto animate-fade-up">
+              <div className="p-4 border-b border-white/20 bg-gradient-to-r from-primary/5 to-transparent">
                 <h3 className="font-semibold text-gray-900">Notificações</h3>
               </div>
               

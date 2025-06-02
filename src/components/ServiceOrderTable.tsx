@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Eye, Edit, Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
 
 interface ServiceOrder {
   id: string;
@@ -36,6 +36,7 @@ const ServiceOrderTable = () => {
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   const orders: ServiceOrder[] = [
     {
@@ -157,11 +158,11 @@ const ServiceOrderTable = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pendente': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'em-andamento': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'concluido': return 'bg-green-100 text-green-800 border-green-300';
-      case 'entregue': return 'bg-gray-100 text-gray-800 border-gray-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'pendente': return 'bg-gradient-warning text-white shadow-neon-yellow/30 animate-pulse-slow';
+      case 'em-andamento': return 'bg-gradient-primary text-white shadow-neon-blue/30 animate-pulse-slow';
+      case 'concluido': return 'bg-gradient-success text-white shadow-neon-green/30 animate-pulse-slow';
+      case 'entregue': return 'bg-gradient-secondary text-white shadow-neon-purple/30';
+      default: return 'bg-gradient-glass text-white backdrop-blur-sm';
     }
   };
 
@@ -192,9 +193,13 @@ const ServiceOrderTable = () => {
     setIsEditDialogOpen(true);
   };
 
+  const handleNewOrderClick = () => {
+    navigate('/ordem-servico');
+  };
+
   return (
     <>
-      <Card className="animate-fade-in">
+      <Card className="animate-fade-in bg-gradient-to-br from-white to-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 backdrop-blur-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-lg font-semibold">Ordens de Serviço Recentes</CardTitle>
@@ -208,7 +213,12 @@ const ServiceOrderTable = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button className="bg-brand-blue hover:bg-blue-600 w-full sm:w-auto">
+              <Button 
+                onClick={handleNewOrderClick}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 shadow-neon-primary/30 hover:shadow-neon-primary/50
+                  transition-all duration-300 w-full sm:w-auto animate-glow bg-200% bg-fixed
+                  hover:bg-right"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Nova OS
               </Button>
@@ -220,19 +230,19 @@ const ServiceOrderTable = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Cliente</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Serviço</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Valor</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Entrega</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Ações</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">ID</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Cliente</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Serviço</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Status</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Valor</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Entrega</th>
+                  <th className="text-left py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-brand-blue">{order.id}</td>
+                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gradient-glass hover:backdrop-blur-sm transition-all duration-300 group">
+                    <td className="py-3 px-4 font-medium bg-gradient-primary bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">{order.id}</td>
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{order.cliente}</div>
@@ -262,7 +272,7 @@ const ServiceOrderTable = () => {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleView(order)}
-                          className="hover:bg-blue-50 hover:text-blue-600"
+                          className="hover:bg-gradient-primary/10 hover:text-vibrant-primary transition-all duration-300 hover:scale-110"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -270,7 +280,7 @@ const ServiceOrderTable = () => {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEdit(order)}
-                          className="hover:bg-green-50 hover:text-green-600"
+                          className="hover:bg-gradient-success/10 hover:text-vibrant-success transition-all duration-300 hover:scale-110"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

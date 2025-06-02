@@ -5,464 +5,682 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, Search, Edit, Trash2, Building2, User } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Users, UserPlus, Search, Edit, Trash2, X, Save, Eye, EyeOff } from 'lucide-react';
 import { useInputMask } from '@/hooks/useInputMask';
-
-interface Cliente {
-  id: string;
-  tipo: 'pessoa_fisica' | 'pessoa_juridica';
-  nome: string;
-  telefone: string;
-  email: string;
-  endereco: string;
-  cep: string;
-  cidade: string;
-  estado: string;
-  cpf?: string;
-  rg?: string;
-  dataNascimento?: string;
-  cnpj?: string;
-  inscricaoEstadual?: string;
-  nomeFantasia?: string;
-  razaoSocial?: string;
-  contato?: string;
-  chavePix?: string;
-  tipoPix?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
-  observacoes: string;
-  status: 'ativo' | 'inativo';
-  dataCadastro: string;
-}
+import { useClientes, type Cliente } from '@/hooks/useClientes';
+import { toast } from 'sonner';
 
 const Clientes = () => {
-  const { maskCEP, maskTelefone, maskRG, maskCNPJ, maskCPF } = useInputMask();
+  // Hooks e estados
+  const { maskCEP, maskTelefone, maskCPF, maskCNPJ, maskRG } = useInputMask();
+  const { 
+    clientes, 
+    loading, 
+    error,
+    addCliente, 
+    updateCliente, 
+    deleteCliente 
+  } = useClientes();
   
-  const [clientes, setClientes] = useState<Cliente[]>([
-    {
-      id: '1',
-      tipo: 'pessoa_fisica',
-      nome: 'João Silva',
-      telefone: '(11) 99999-9999',
-      email: 'joao@email.com',
-      endereco: 'Rua das Flores, 123',
-      cep: '01234-567',
-      cidade: 'São Paulo',
-      estado: 'SP',
-      cpf: '123.456.789-00',
-      rg: '12.345.678-9',
-      dataNascimento: '1985-05-15',
-      chavePix: 'joao@email.com',
-      tipoPix: 'email',
-      observacoes: 'Cliente preferencial',
-      status: 'ativo',
-      dataCadastro: '01/04/2024'
-    }
-  ]);
-
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [tipoCliente, setTipoCliente] = useState<'pessoa_fisica' | 'pessoa_juridica'>('pessoa_fisica');
+  const [busca, setBusca] = useState('');
   
-  const [formData, setFormData] = useState({
-    tipo: 'pessoa_fisica' as 'pessoa_fisica' | 'pessoa_juridica',
+  const [activeTab, setActiveTab] = useState<'fisica' | 'juridica'>('fisica');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [formData, setFormData] = useState<Partial<Cliente>>({
+    tipo: 'fisica',
     nome: '',
+    cpf: '',
+    rg: '',
+    data_nascimento: '',
+    razao_social: '',
+    nome_fantasia: '',
+    cnpj: '',
+    inscricao_estadual: '',
     telefone: '',
     email: '',
     endereco: '',
+    bairro: '',
     cep: '',
     cidade: '',
     estado: '',
-    cpf: '',
-    rg: '',
-    dataNascimento: '',
-    cnpj: '',
-    inscricaoEstadual: '',
-    nomeFantasia: '',
-    razaoSocial: '',
-    contato: '',
-    chavePix: '',
-    tipoPix: 'cpf' as 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria',
-    observacoes: ''
+    ativo: true,
   });
 
+  // Funções auxiliares
   const resetForm = () => {
     setFormData({
-      tipo: 'pessoa_fisica',
+      tipo: 'fisica',
       nome: '',
+      cpf: '',
+      rg: '',
+      data_nascimento: '',
+      razao_social: '',
+      nome_fantasia: '',
+      cnpj: '',
+      inscricao_estadual: '',
       telefone: '',
       email: '',
       endereco: '',
+      bairro: '',
       cep: '',
       cidade: '',
       estado: '',
-      cpf: '',
-      rg: '',
-      dataNascimento: '',
-      cnpj: '',
-      inscricaoEstadual: '',
-      nomeFantasia: '',
-      razaoSocial: '',
-      contato: '',
-      chavePix: '',
-      tipoPix: 'cpf',
-      observacoes: ''
+      ativo: true,
     });
-    setShowForm(false);
+    setActiveTab('fisica');
     setEditingId(null);
-    setTipoCliente('pessoa_fisica');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Função para validar CPF
+  const validarCPF = (cpf: string) => {
+    cpf = cpf.replace(/[\D]/g, '');
+    if (cpf.length !== 11) return false;
     
-    if (editingId) {
-      setClientes(prev => prev.map(cliente => 
-        cliente.id === editingId 
-          ? { ...cliente, ...formData }
-          : cliente
-      ));
-    } else {
-      const novoCliente: Cliente = {
-        id: Date.now().toString(),
-        ...formData,
-        status: 'ativo',
-        dataCadastro: new Date().toLocaleDateString('pt-BR')
-      };
-      setClientes(prev => [...prev, novoCliente]);
+    // Validação de dígitos repetidos
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let soma = 0;
+    for (let i = 0; i < 9; i++) {
+      soma += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(9))) return false;
+    
+    // Validação do segundo dígito verificador
+    soma = 0;
+    for (let i = 0; i < 10; i++) {
+      soma += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(10))) return false;
+    
+    return true;
+  };
+
+  // Função para validar CNPJ
+  const validarCNPJ = (cnpj: string) => {
+    cnpj = cnpj.replace(/[\D]/g, '');
+    if (cnpj.length !== 14) return false;
+    
+    // Validação de dígitos repetidos
+    if (/^(\d)\1{13}$/.test(cnpj)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let tamanho = cnpj.length - 2;
+    let numeros = cnpj.substring(0, tamanho);
+    const digitos = cnpj.substring(tamanho);
+    let soma = 0;
+    let pos = tamanho - 7;
+    
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
     }
     
-    resetForm();
+    let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== parseInt(digitos.charAt(0))) return false;
+    
+    // Validação do segundo dígito verificador
+    tamanho = tamanho + 1;
+    numeros = cnpj.substring(0, tamanho);
+    soma = 0;
+    pos = tamanho - 7;
+    
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    
+    resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== parseInt(digitos.charAt(1))) return false;
+    
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      // Validação de CPF/CNPJ
+      if (activeTab === 'fisica' && formData.cpf && !validarCPF(formData.cpf)) {
+        toast.error('CPF inválido');
+        return;
+      }
+      
+      if (activeTab === 'juridica' && formData.cnpj && !validarCNPJ(formData.cnpj)) {
+        toast.error('CNPJ inválido');
+        return;
+      }
+      // Validação básica
+      if (!formData.nome) {
+        toast.error('O nome é obrigatório');
+        return;
+      }
+      
+      // Validação de CNPJ obrigatório para pessoa jurídica
+      if (activeTab === 'juridica' && !formData.cnpj) {
+        toast.error('O CNPJ é obrigatório para pessoa jurídica');
+        return;
+      }
+      
+      // Validação de e-mail
+      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        toast.error('Por favor, insira um e-mail válido');
+        return;
+      }
+
+      // Prepara os dados com base no tipo de cliente
+      const dadosCliente: Omit<Cliente, 'id' | 'data_cadastro'> = {
+        ...formData,
+        tipo: activeTab,
+        // Garante que campos vazios sejam null
+        nome: formData.nome.trim(),
+        telefone: formData.telefone?.trim() || null,
+        email: formData.email?.trim() || null,
+        endereco: formData.endereco?.trim() || null,
+        bairro: formData.bairro?.trim() || null,
+        cep: formData.cep?.replace(/\D/g, '') || null,
+        cidade: formData.cidade?.trim() || null,
+        estado: formData.estado?.trim().toUpperCase() || null,
+        ativo: formData.ativo ?? true,
+        // Campos específicos para pessoa física
+        cpf: activeTab === 'fisica' ? formData.cpf?.replace(/\D/g, '') || null : null,
+        rg: activeTab === 'fisica' ? formData.rg?.trim() || null : null,
+        data_nascimento: activeTab === 'fisica' ? formData.data_nascimento || null : null,
+        // Campos específicos para pessoa jurídica
+        razao_social: activeTab === 'juridica' ? formData.razao_social?.trim() || null : null,
+        nome_fantasia: activeTab === 'juridica' ? formData.nome_fantasia?.trim() || null : null,
+        cnpj: activeTab === 'juridica' ? formData.cnpj?.replace(/\D/g, '') || null : null,
+        inscricao_estadual: activeTab === 'juridica' ? formData.inscricao_estadual?.trim() || null : null
+      };
+
+      setIsSubmitting(true);
+      if (editingId) {
+        await updateCliente(editingId, dadosCliente);
+        toast.success('Cliente atualizado com sucesso!');
+      } else {
+        await addCliente(dadosCliente);
+        toast.success('Cliente adicionado com sucesso!');
+      }
+      
+      resetForm();
+      setShowForm(false);
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      toast.error('Erro ao salvar cliente. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (cliente: Cliente) => {
+    setActiveTab(cliente.tipo || 'fisica');
     setFormData({
-      tipo: cliente.tipo,
-      nome: cliente.nome,
-      telefone: cliente.telefone,
-      email: cliente.email,
-      endereco: cliente.endereco,
+      tipo: cliente.tipo || 'fisica',
+      nome: cliente.nome || '',
+      telefone: cliente.telefone || '',
+      email: cliente.email || '',
+      endereco: cliente.endereco || '',
+      bairro: cliente.bairro || '',
       cep: cliente.cep || '',
       cidade: cliente.cidade || '',
       estado: cliente.estado || '',
+      ativo: cliente.ativo ?? true,
+      // Campos específicos para pessoa física
       cpf: cliente.cpf || '',
       rg: cliente.rg || '',
-      dataNascimento: cliente.dataNascimento || '',
+      data_nascimento: cliente.data_nascimento || '',
+      // Campos específicos para pessoa jurídica
+      razao_social: cliente.razao_social || '',
+      nome_fantasia: cliente.nome_fantasia || '',
       cnpj: cliente.cnpj || '',
-      inscricaoEstadual: cliente.inscricaoEstadual || '',
-      nomeFantasia: cliente.nomeFantasia || '',
-      razaoSocial: cliente.razaoSocial || '',
-      contato: cliente.contato || '',
-      chavePix: cliente.chavePix || '',
-      tipoPix: cliente.tipoPix || 'cpf',
-      observacoes: cliente.observacoes
+      inscricao_estadual: cliente.inscricao_estadual || ''
     });
-    setTipoCliente(cliente.tipo);
     setEditingId(cliente.id);
     setShowForm(true);
   };
+  
+  const handleTabChange = (tab: 'fisica' | 'juridica') => {
+    setActiveTab(tab);
+    setFormData(prev => ({
+      ...prev,
+      tipo: tab
+    }));
+  };
 
-  const handleDelete = (id: string) => {
-    setClientes(prev => prev.filter(cliente => cliente.id !== id));
+  const handleDelete = async (id: string) => {
+    // Encontra o cliente para mostrar o nome na mensagem de confirmação
+    const cliente = clientes.find(c => c.id === id);
+    
+    if (!cliente) {
+      toast.error('Cliente não encontrado');
+      return;
+    }
+    
+    // Mostra um diálogo de confirmação
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir o cliente "${cliente.nome}"?\n\n` +
+      'Esta ação não pode ser desfeita.'
+    );
+    
+    if (!confirmDelete) return;
+    
+    try {
+      await deleteCliente(id);
+      toast.success('Cliente excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente. Tente novamente.');
+    }
+  };
+  
+  const toggleStatus = async (cliente: Cliente) => {
+    try {
+      await updateCliente(cliente.id, { ativo: !cliente.ativo });
+      toast.success(`Cliente ${cliente.ativo ? 'desativado' : 'ativado'} com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao atualizar status do cliente:', error);
+      toast.error('Erro ao atualizar status do cliente. Tente novamente.');
+    }
+  };
+
+  const buscarEnderecoPorCEP = async (cep: string) => {
+    try {
+      const cepLimpo = cep.replace(/\D/g, '');
+      if (cepLimpo.length !== 8) return;
+      
+      setBuscandoCep(true);
+      
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await response.json();
+      
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        cep: cepLimpo,
+        endereco: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || ''
+      }));
+      
+      toast.success('Endereço preenchido automaticamente');
+    } catch (error) {
+      console.error('Erro ao buscar endereço:', error);
+      toast.error('Erro ao buscar endereço. Verifique o CEP e tente novamente.');
+    } finally {
+      setBuscandoCep(false);
+    }
+  };
+
+  // Função para formatar telefone com máscara dinâmica
+  const formatarTelefone = (value: string) => {
+    const numeros = value.replace(/\D/g, '');
+    
+    if (numeros.length <= 10) {
+      // Formato para telefone fixo: (00) 0000-0000
+      return numeros
+        .replace(/(\d{0,2})/, '($1')
+        .replace(/(\(\d{2})(\d)/, '$1) $2')
+        .replace(/(\d{4})(\d{1,4})/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    } else {
+      // Formato para celular: (00) 00000-0000
+      return numeros
+        .replace(/(\d{0,2})/, '($1')
+        .replace(/(\(\d{2})(\d)/, '$1) $2')
+        .replace(/(\d{5})(\d{1,4})/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    let maskedValue = value;
-    
-    switch (field) {
-      case 'cep':
-        maskedValue = maskCEP(value);
-        break;
-      case 'telefone':
-        maskedValue = maskTelefone(value);
-        break;
-      case 'rg':
-        maskedValue = maskRG(value);
-        break;
-      case 'cnpj':
-        maskedValue = maskCNPJ(value);
-        break;
-      case 'cpf':
-        maskedValue = maskCPF(value);
-        break;
+    // Se for o campo de CEP, remove formatação e busca o endereço se tiver 8 dígitos
+    if (field === 'cep') {
+      const cepLimpo = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        cep: cepLimpo
+      }));
+      
+      if (cepLimpo.length === 8) {
+        buscarEnderecoPorCEP(cepLimpo);
+      }
+      return;
     }
     
-    setFormData({...formData, [field]: maskedValue});
+    // Se for telefone, aplica a máscara de formatação
+    if (field === 'telefone') {
+      const telefoneLimpo = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        telefone: telefoneLimpo
+      }));
+      return;
+    }
+    
+    // Para CPF, CNPJ e RG, apenas remove caracteres não numéricos
+    if (['cpf', 'cnpj', 'rg'].includes(field)) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value.replace(/\D/g, '')
+      }));
+      return;
+    }
+    
+    // Para os demais campos, apenas atualiza o valor
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
+  // Filtra os clientes com base na busca
+  const filteredClientes = clientes.filter(cliente => 
+    cliente.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    (cliente.email && cliente.email.toLowerCase().includes(busca.toLowerCase())) ||
+    (cliente.telefone && cliente.telefone.includes(busca))
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex overflow-hidden relative">
+      {/* Elementos decorativos de fundo */}
+      <div className="absolute inset-0 bg-grid-primary/10 mask-gradient-to-b pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-gradient-primary/20 rounded-full blur-3xl animate-pulse-slow" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-gradient-secondary/20 rounded-full blur-3xl animate-pulse-slow" />
       <Sidebar />
       
       <div className="flex-1 flex flex-col">
         <Header />
         
-        <main className="flex-1 p-6 space-y-6">
+        <main className="flex-1 p-6 space-y-6 relative z-10">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <Users className="h-8 w-8 text-brand-blue" />
-              <h1 className="text-3xl font-bold text-gray-900">Clientes</h1>
+              <Users className="h-8 w-8 bg-gradient-primary text-white p-1.5 rounded-lg shadow-neon-primary/30 animate-pulse-slow" />
+              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent animate-glow">Clientes</h1>
             </div>
-            <Button onClick={() => setShowForm(true)} className="bg-brand-blue hover:bg-blue-600">
+            <Button 
+              onClick={() => {
+                resetForm();
+                setShowForm(true);
+              }} 
+              className="bg-gradient-primary hover:shadow-neon-primary/50 transition-all duration-300 hover:scale-105"
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Novo Cliente
             </Button>
           </div>
 
+          {/* Formulário de cadastro/edição */}
           {showForm && (
-            <Card className="animate-fade-in">
-              <CardHeader>
+            <Card className="animate-fade-in bg-white/80 backdrop-blur-sm border border-white/20 shadow-neon-primary/10">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>
                   {editingId ? 'Editar Cliente' : 'Novo Cliente'}
                 </CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Tipo de Cliente */}
-                  <div className="space-y-4">
-                    <Label>Tipo de Cliente</Label>
-                    <Tabs value={tipoCliente} onValueChange={(value) => {
-                      setTipoCliente(value as 'pessoa_fisica' | 'pessoa_juridica');
-                      setFormData({...formData, tipo: value as 'pessoa_fisica' | 'pessoa_juridica'});
-                    }}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="pessoa_fisica" className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Pessoa Física
-                        </TabsTrigger>
-                        <TabsTrigger value="pessoa_juridica" className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4" />
-                          Pessoa Jurídica
-                        </TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="pessoa_fisica" className="space-y-4">
-                        {/* Dados Pessoais */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor="nome">Nome Completo *</Label>
-                            <Input
-                              id="nome"
-                              value={formData.nome}
-                              onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="cpf">CPF *</Label>
-                            <Input
-                              id="cpf"
-                              value={formData.cpf}
-                              onChange={(e) => handleInputChange('cpf', e.target.value)}
-                              placeholder="000.000.000-00"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="rg">RG</Label>
-                            <Input
-                              id="rg"
-                              value={formData.rg}
-                              onChange={(e) => handleInputChange('rg', e.target.value)}
-                              placeholder="00.000.000-0"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="dataNascimento">Data de Nascimento</Label>
-                            <Input
-                              id="dataNascimento"
-                              type="date"
-                              value={formData.dataNascimento}
-                              onChange={(e) => setFormData({...formData, dataNascimento: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="telefone">Telefone *</Label>
-                            <Input
-                              id="telefone"
-                              value={formData.telefone}
-                              onChange={(e) => handleInputChange('telefone', e.target.value)}
-                              placeholder="(11) 99999-9999"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="email">Email *</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({...formData, email: e.target.value})}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="pessoa_juridica" className="space-y-4">
-                        {/* Dados da Empresa */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor="razaoSocial">Razão Social *</Label>
-                            <Input
-                              id="razaoSocial"
-                              value={formData.razaoSocial}
-                              onChange={(e) => setFormData({...formData, razaoSocial: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
-                            <Input
-                              id="nomeFantasia"
-                              value={formData.nomeFantasia}
-                              onChange={(e) => setFormData({...formData, nomeFantasia: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="cnpj">CNPJ *</Label>
-                            <Input
-                              id="cnpj"
-                              value={formData.cnpj}
-                              onChange={(e) => handleInputChange('cnpj', e.target.value)}
-                              placeholder="00.000.000/0000-00"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="inscricaoEstadual">Inscrição Estadual</Label>
-                            <Input
-                              id="inscricaoEstadual"
-                              value={formData.inscricaoEstadual}
-                              onChange={(e) => setFormData({...formData, inscricaoEstadual: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="contato">Pessoa de Contato</Label>
-                            <Input
-                              id="contato"
-                              value={formData.contato}
-                              onChange={(e) => setFormData({...formData, contato: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="telefone">Telefone *</Label>
-                            <Input
-                              id="telefone"
-                              value={formData.telefone}
-                              onChange={(e) => handleInputChange('telefone', e.target.value)}
-                              placeholder="(11) 99999-9999"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="email">Email *</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({...formData, email: e.target.value})}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                  {/* Abas para selecionar o tipo de cliente */}
+                  <div className="border-b border-gray-200">
+                    <nav className="-mb-px flex space-x-8">
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange('fisica')}
+                        className={`${activeTab === 'fisica' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                      >
+                        Pessoa Física
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange('juridica')}
+                        className={`${activeTab === 'juridica' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                      >
+                        Pessoa Jurídica
+                      </button>
+                    </nav>
                   </div>
 
-                  {/* Endereço */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Endereço</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Campos comuns */}
+                    <div>
+                      <Label htmlFor="nome">{activeTab === 'fisica' ? 'Nome Completo *' : 'Nome Fantasia *'}</Label>
+                      <Input
+                        id="nome"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.nome}
+                        onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    {/* Campo Razão Social (apenas PJ) */}
+                    {activeTab === 'juridica' && (
                       <div>
-                        <Label htmlFor="cep">CEP</Label>
+                        <Label htmlFor="razao_social">Razão Social *</Label>
                         <Input
-                          id="cep"
-                          value={formData.cep}
-                          onChange={(e) => handleInputChange('cep', e.target.value)}
-                          placeholder="00000-000"
+                          id="razao_social"
+                          className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                          value={formData.razao_social || ''}
+                          onChange={(e) => setFormData({...formData, razao_social: e.target.value})}
+                          required
                         />
                       </div>
-                      <div className="md:col-span-2">
-                        <Label htmlFor="endereco">Endereço Completo</Label>
-                        <Input
-                          id="endereco"
-                          value={formData.endereco}
-                          onChange={(e) => setFormData({...formData, endereco: e.target.value})}
-                          placeholder="Rua, número, bairro"
-                        />
-                      </div>
+                    )}
+
+                    {/* Campo CPF/CNPJ */}
+                    <div>
+                      <Label htmlFor={activeTab === 'fisica' ? 'cpf' : 'cnpj'}>
+                        {activeTab === 'fisica' ? 'CPF' : 'CNPJ *'}
+                      </Label>
+                      <Input
+                        id={activeTab === 'fisica' ? 'cpf' : 'cnpj'}
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={activeTab === 'fisica' 
+                          ? (formData.cpf ? maskCPF(formData.cpf) : '') 
+                          : (formData.cnpj ? maskCNPJ(formData.cnpj) : '')}
+                        onChange={(e) => {
+                          if (activeTab === 'fisica') {
+                            setFormData({...formData, cpf: e.target.value.replace(/\D/g, '')});
+                          } else {
+                            setFormData({...formData, cnpj: e.target.value.replace(/\D/g, '')});
+                          }
+                        }}
+                        placeholder={activeTab === 'fisica' ? '000.000.000-00' : '00.000.000/0000-00'}
+                        required={activeTab === 'juridica'}
+                      />
+                    </div>
+
+                    {/* Campo RG/Inscrição Estadual */}
+                    <div>
+                      <Label htmlFor={activeTab === 'fisica' ? 'rg' : 'inscricao_estadual'}>
+                        {activeTab === 'fisica' ? 'RG' : 'Inscrição Estadual'}
+                      </Label>
+                      <Input
+                        id={activeTab === 'fisica' ? 'rg' : 'inscricao_estadual'}
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={activeTab === 'fisica' 
+                          ? (formData.rg ? maskRG(formData.rg) : '') 
+                          : (formData.inscricao_estadual || '')}
+                        onChange={(e) => {
+                          if (activeTab === 'fisica') {
+                            setFormData({...formData, rg: e.target.value.replace(/\D/g, '')});
+                          } else {
+                            setFormData({...formData, inscricao_estadual: e.target.value});
+                          }
+                        }}
+                        placeholder={activeTab === 'fisica' ? '00.000.000-0' : 'Inscrição Estadual'}
+                      />
+                    </div>
+
+                    {/* Campo Data de Nascimento (apenas PF) */}
+                    {activeTab === 'fisica' && (
                       <div>
-                        <Label htmlFor="cidade">Cidade</Label>
+                        <Label htmlFor="data_nascimento">Data de Nascimento</Label>
                         <Input
-                          id="cidade"
-                          value={formData.cidade}
-                          onChange={(e) => setFormData({...formData, cidade: e.target.value})}
+                          id="data_nascimento"
+                          type="date"
+                          className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                          value={formData.data_nascimento || ''}
+                          onChange={(e) => setFormData({...formData, data_nascimento: e.target.value})}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="estado">Estado</Label>
+                    )}
+
+                    {/* Campo Telefone */}
+                    <div>
+                      <Label htmlFor="telefone">Telefone *</Label>
+                      <div className="relative">
                         <Input
-                          id="estado"
-                          value={formData.estado}
-                          onChange={(e) => setFormData({...formData, estado: e.target.value})}
-                          placeholder="SP"
-                          maxLength={2}
+                          id="telefone"
+                          className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm pl-28"
+                          value={formData.telefone ? formatarTelefone(formData.telefone) : ''}
+                          onChange={(e) => handleInputChange('telefone', e.target.value)}
+                          placeholder="(00) 00000-0000"
+                          required
                         />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                          +55
+                        </span>
                       </div>
+                    </div>
+
+                    {/* Campo E-mail */}
+                    <div>
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.email || ''}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
+                    </div>
+
+                    {/* Campo CEP */}
+                    <div>
+                      <Label htmlFor="cep">CEP</Label>
+                      <Input
+                        id="cep"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.cep ? maskCEP(formData.cep) : ''}
+                        onChange={(e) => setFormData({...formData, cep: e.target.value.replace(/\D/g, '')})}
+                        placeholder="00000-000"
+                      />
+                    </div>
+
+                    {/* Campo Endereço */}
+                    <div>
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.endereco || ''}
+                        onChange={(e) => setFormData({...formData, endereco: e.target.value})}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="bairro">Bairro</Label>
+                      <Input
+                        id="bairro"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.bairro || ''}
+                        onChange={(e) => setFormData({...formData, bairro: e.target.value})}
+                      />
+                    </div>
+
+                    {/* Campo Cidade */}
+                    <div>
+                      <Label htmlFor="cidade">Cidade</Label>
+                      <Input
+                        id="cidade"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.cidade || ''}
+                        onChange={(e) => setFormData({...formData, cidade: e.target.value})}
+                      />
+                    </div>
+
+                    {/* Campo Estado */}
+                    <div>
+                      <Label htmlFor="estado">Estado</Label>
+                      <Input
+                        id="estado"
+                        className="bg-white/50 border border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                        value={formData.estado || ''}
+                        onChange={(e) => setFormData({...formData, estado: e.target.value})}
+                        maxLength={2}
+                        placeholder="UF"
+                      />
+                    </div>
+
+                    {/* Checkbox Ativo */}
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="ativo"
+                        checked={formData.ativo}
+                        onChange={(e) => setFormData({...formData, ativo: e.target.checked})}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <Label htmlFor="ativo">Ativo</Label>
                     </div>
                   </div>
 
-                  {/* Dados PIX */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Dados PIX</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="tipoPix">Tipo de Chave PIX</Label>
-                        <select
-                          id="tipoPix"
-                          className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md"
-                          value={formData.tipoPix}
-                          onChange={(e) => setFormData({...formData, tipoPix: e.target.value as any})}
-                        >
-                          <option value="cpf">CPF</option>
-                          <option value="cnpj">CNPJ</option>
-                          <option value="email">Email</option>
-                          <option value="telefone">Telefone</option>
-                          <option value="aleatoria">Chave Aleatória</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="chavePix">Chave PIX</Label>
-                        <Input
-                          id="chavePix"
-                          value={formData.chavePix}
-                          onChange={(e) => setFormData({...formData, chavePix: e.target.value})}
-                          placeholder="Digite a chave PIX"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Observações */}
-                  <div>
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea
-                      id="observacoes"
-                      value={formData.observacoes}
-                      onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
-                      rows={3}
-                      placeholder="Informações adicionais sobre o cliente"
-                    />
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <Button type="submit" className="bg-green-500 hover:bg-green-600">
-                      {editingId ? 'Atualizar' : 'Cadastrar'}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={resetForm}>
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowForm(false);
+                        resetForm();
+                      }}
+                    >
                       Cancelar
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className={`w-full ${isSubmitting ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'} text-white`}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processando...
+                        </>
+                      ) : (
+                        <>{editingId ? 'Atualizar' : 'Adicionar'}</>
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -470,64 +688,135 @@ const Clientes = () => {
             </Card>
           )}
 
-          <Card>
+          {/* Lista de clientes */}
+          <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-neon-primary/10">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Lista de Clientes</CardTitle>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input placeholder="Buscar clientes..." className="pl-10 w-64" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    type="search"
+                    placeholder="Buscar clientes..."
+                    className="pl-10 bg-white/50 border-white/20 focus:border-primary/20 focus:shadow-neon-primary/20 transition-all duration-300 backdrop-blur-sm"
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                  />
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Tipo</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">CPF/CNPJ</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Telefone</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientes.map((cliente) => (
-                      <tr key={cliente.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <Badge variant={cliente.tipo === 'pessoa_fisica' ? 'default' : 'secondary'}>
-                            {cliente.tipo === 'pessoa_fisica' ? 'PF' : 'PJ'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 font-medium">
-                          {cliente.tipo === 'pessoa_juridica' ? cliente.razaoSocial || cliente.nome : cliente.nome}
-                        </td>
-                        <td className="py-3 px-4">{cliente.cpf || cliente.cnpj}</td>
-                        <td className="py-3 px-4">{cliente.telefone}</td>
-                        <td className="py-3 px-4">{cliente.email}</td>
-                        <td className="py-3 px-4">
-                          <Badge className={cliente.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                            {cliente.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex space-x-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(cliente)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(cliente.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {loading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  {error}
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Nome/Razão Social</TableHead>
+                        <TableHead>CPF/CNPJ</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Bairro</TableHead>
+                        <TableHead>Cidade/UF</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClientes.length > 0 ? (
+                        filteredClientes.map((cliente) => (
+                          <TableRow key={cliente.id}>
+                            <TableCell>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                cliente.tipo === 'fisica' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {cliente.tipo === 'fisica' ? 'PF' : 'PJ'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {cliente.tipo === 'fisica' ? cliente.nome : (cliente.razao_social || cliente.nome)}
+                              {cliente.tipo === 'juridica' && cliente.nome_fantasia && (
+                                <div className="text-xs text-gray-500">{cliente.nome_fantasia}</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {cliente.tipo === 'fisica' 
+                                ? (cliente.cpf || '-')
+                                : (cliente.cnpj || '-')
+                              }
+                            </TableCell>
+                            <TableCell>{cliente.telefone || '-'}</TableCell>
+                            <TableCell>{cliente.email || '-'}</TableCell>
+                            <TableCell>{cliente.bairro || '-'}</TableCell>
+                            <TableCell>
+                              {cliente.cidade ? `${cliente.cidade}${cliente.estado ? `/${cliente.estado}` : ''}` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                cliente.ativo 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {cliente.ativo ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => toggleStatus(cliente)}
+                                  className={`${cliente.ativo ? 'text-yellow-600 hover:bg-yellow-100' : 'text-green-600 hover:bg-green-100'}`}
+                                  title={cliente.ativo ? 'Desativar cliente' : 'Ativar cliente'}
+                                >
+                                  {cliente.ativo ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(cliente)}
+                                  className="text-blue-600 hover:bg-blue-100"
+                                  title="Editar cliente"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(cliente.id)}
+                                  className="text-red-600 hover:bg-red-100"
+                                  title="Excluir cliente"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={9} className="h-24 text-center">
+                            Nenhum cliente encontrado
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ClipboardList, Plus, Search, Edit, Eye } from 'lucide-react';
+import { ClipboardList, Plus, Search, Edit, Eye, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Cliente {
@@ -151,6 +151,7 @@ const OrdemServico = () => {
         title: "Ordem atualizada",
         description: `Ordem ${editingId} foi atualizada com sucesso.`,
       });
+      setIsEditDialogOpen(false); // Fechar o diálogo após salvar
     } else {
       const novaOrdem: OrdemServico = {
         id: `OS-${String(ordens.length + 1).padStart(3, '0')}`,
@@ -195,6 +196,7 @@ const OrdemServico = () => {
     setShowForm(false);
     setEditingId(null);
     setClienteSelecionado(null);
+    setSelectedOrder(null);
   };
 
   const handleView = (ordem: OrdemServico) => {
@@ -259,37 +261,63 @@ const OrdemServico = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         
-        <main className="flex-1 p-6 space-y-6">
-          <div className="flex justify-between items-center">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6 overflow-auto">
+          {/* Cabeçalho */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-white/30">
             <div className="flex items-center space-x-3">
-              <ClipboardList className="h-8 w-8 text-brand-blue" />
-              <h1 className="text-3xl font-bold text-gray-900">Ordens de Serviço</h1>
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg shadow-neon-primary/30">
+                <ClipboardList className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  Ordens de Serviço
+                </h1>
+                <p className="text-sm text-gray-500">Gerencie as ordens de serviço da sua loja</p>
+              </div>
             </div>
-            <Button onClick={() => setShowForm(true)} className="bg-brand-blue hover:bg-blue-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova OS
+            <Button 
+              onClick={() => setShowForm(true)} 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white 
+                        shadow-neon-primary/30 hover:shadow-neon-primary/50 transition-all duration-300
+                        group flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg"
+            >
+              <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+              <span>Nova OS</span>
             </Button>
           </div>
 
           {showForm && (
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle>
-                  {editingId ? 'Editar Ordem de Serviço' : 'Nova Ordem de Serviço'}
-                </CardTitle>
+            <Card className="animate-fade-in bg-white/70 backdrop-blur-sm border border-white/30 shadow-lg">
+              <CardHeader className="border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-semibold text-gray-800">
+                    {editingId ? '✏️ Editar Ordem de Serviço' : '✨ Nova Ordem de Serviço'}
+                  </CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setShowForm(false);
+                      resetForm();
+                    }}
+                    className="text-gray-700 hover:bg-gray-100 rounded-full h-8 w-8 p-0 border border-gray-300 shadow-sm"
+                  >
+                    ×
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+              <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-8">
                   {/* Dados Básicos */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="md:col-span-2">
-                      <Label htmlFor="cliente">Cliente</Label>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="cliente" className="text-sm font-medium text-gray-700">Cliente</Label>
                       <BuscaCliente
                         onClienteSelecionado={handleClienteSelecionado}
                         onNovoCliente={handleNovoCliente}
@@ -311,6 +339,7 @@ const OrdemServico = () => {
                         value={formData.entrada}
                         onChange={e => setFormData({ ...formData, entrada: e.target.value })}
                         required
+                        className="bg-white border-gray-300 text-gray-900"
                       />
                     </div>
                     <div>
@@ -321,6 +350,7 @@ const OrdemServico = () => {
                         value={formData.saida}
                         onChange={e => setFormData({ ...formData, saida: e.target.value })}
                         required
+                        className="bg-white border-gray-300 text-gray-900"
                       />
                     </div>
                   </div>
@@ -331,33 +361,48 @@ const OrdemServico = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="corte">Corte</Label>
-                        <Input id="corte" value={formData.pedido.corte} onChange={e => setFormData({
-                      ...formData,
-                      pedido: {
-                        ...formData.pedido,
-                        corte: e.target.value
-                      }
-                    })} />
+                        <Input 
+                          id="corte" 
+                          value={formData.pedido.corte} 
+                          onChange={e => setFormData({
+                            ...formData,
+                            pedido: {
+                              ...formData.pedido,
+                              corte: e.target.value
+                            }
+                          })}
+                          className="bg-white border-gray-300 text-gray-900"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="estampa">Estampa Ex: Bordado</Label>
-                        <Input id="estampa" value={formData.pedido.estampa} onChange={e => setFormData({
-                      ...formData,
-                      pedido: {
-                        ...formData.pedido,
-                        estampa: e.target.value
-                      }
-                    })} />
+                        <Input 
+                          id="estampa" 
+                          value={formData.pedido.estampa} 
+                          onChange={e => setFormData({
+                            ...formData,
+                            pedido: {
+                              ...formData.pedido,
+                              estampa: e.target.value
+                            }
+                          })}
+                          className="bg-white border-gray-300 text-gray-900"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="costura">Costura</Label>
-                        <Input id="costura" value={formData.pedido.costura} onChange={e => setFormData({
-                      ...formData,
-                      pedido: {
-                        ...formData.pedido,
-                        costura: e.target.value
-                      }
-                    })} />
+                        <Input 
+                          id="costura" 
+                          value={formData.pedido.costura} 
+                          onChange={e => setFormData({
+                            ...formData,
+                            pedido: {
+                              ...formData.pedido,
+                              costura: e.target.value
+                            }
+                          })}
+                          className="bg-white border-gray-300 text-gray-900"
+                        />
                       </div>
                     </div>
                   </div>
@@ -368,7 +413,11 @@ const OrdemServico = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="manga">Tipo de Manga</Label>
-                        <select id="manga" className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md" value={formData.tipo.manga} onChange={e => setFormData({
+                        <select 
+                          id="manga" 
+                          className="w-full h-10 px-3 py-2 border border-gray-300 bg-white text-gray-900 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" 
+                          value={formData.tipo.manga} 
+                          onChange={e => setFormData({
                       ...formData,
                       tipo: {
                         ...formData.tipo,
@@ -474,7 +523,10 @@ const OrdemServico = () => {
                       Valor Total: R$ {(formData.precoUnitario * formData.quantidade).toFixed(2)}
                     </span>
                     <div className="flex space-x-2">
-                      <Button type="submit" className="bg-green-500 hover:bg-green-600">
+                      <Button 
+                        type="submit" 
+                        className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
+                      >
                         {editingId ? 'Atualizar' : 'Criar OS'}
                       </Button>
                       <Button type="button" variant="outline" onClick={resetForm}>
@@ -487,73 +539,97 @@ const OrdemServico = () => {
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Lista de Ordens de Serviço</CardTitle>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Card className="bg-white/70 backdrop-blur-sm border border-white/30 shadow-lg overflow-hidden">
+            <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <CardTitle className="text-lg font-semibold text-gray-800">Lista de Ordens</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">Visualize e gerencie todas as ordens de serviço</p>
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-500" />
+                  </div>
                   <Input
-                    placeholder="Buscar por OS, cliente ou status..."
-                    className="pl-10 w-80"
+                    type="text"
+                    placeholder="Buscar ordens..."
+                    className="pl-10 w-full sm:w-72 bg-white border border-gray-300 text-gray-900 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={buscaOrdens}
                     onChange={(e) => setBuscaOrdens(e.target.value)}
                   />
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">OS</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Cliente</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Entrada</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Saída</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Valor</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Ações</th>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50/50 backdrop-blur-sm">
+                    <tr>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        ID
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Entrada/Saída
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Valor
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider pr-8">
+                        Ações
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {ordensFiltradasPorBusca.map(ordem => (
-                      <tr key={ordem.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium text-brand-blue">{ordem.id}</td>
-                        <td className="py-3 px-4">{ordem.cliente}</td>
-                        <td className="py-3 px-4">{ordem.entrada}</td>
-                        <td className="py-3 px-4">{ordem.saida}</td>
-                        <td className="py-3 px-4">
-                          <select 
-                            value={ordem.status} 
-                            onChange={(e) => handleStatusChange(ordem.id, e.target.value as OrdemServico['status'])}
-                            className={`px-2 py-1 rounded text-xs font-medium border-0 ${getStatusColor(ordem.status)}`}
-                          >
-                            <option value="pendente">Pendente</option>
-                            <option value="em-andamento">Em Andamento</option>
-                            <option value="concluido">Concluído</option>
-                            <option value="entregue">Entregue</option>
-                          </select>
+                  <tbody className="bg-white/30 divide-y divide-gray-100">
+                    {ordensFiltradasPorBusca.map((ordem) => (
+                      <tr key={ordem.id} className="hover:bg-gray-50/70 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 font-mono">{ordem.id}</div>
                         </td>
-                        <td className="py-3 px-4 font-medium">R$ {ordem.valor.toFixed(2)}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">{ordem.cliente}</div>
+                          <div className="text-xs text-gray-500">{ordem.pedido.corte}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{ordem.entrada}</div>
+                          <div className="text-xs text-gray-500">até {ordem.saida}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            }).format(ordem.valor || 0)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ordem.status)}`}>
+                              {getStatusText(ordem.status)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
                               onClick={() => handleView(ordem)}
-                              className="hover:bg-blue-50 hover:text-blue-600"
+                              className="text-gray-600 hover:text-blue-600 transition-colors p-1.5 rounded-full bg-gray-100 hover:bg-blue-100"
+                              title="Visualizar"
                             >
                               <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
+                            </button>
+                            <button
                               onClick={() => handleEdit(ordem)}
-                              className="hover:bg-green-50 hover:text-green-600"
+                              className="text-gray-600 hover:text-purple-600 transition-colors p-1.5 rounded-full bg-gray-100 hover:bg-purple-100"
+                              title="Editar"
                             >
                               <Edit className="h-4 w-4" />
-                            </Button>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -561,9 +637,11 @@ const OrdemServico = () => {
                   </tbody>
                 </table>
                 
-                {ordensFiltradasPorBusca.length === 0 && buscaOrdens && (
-                  <div className="text-center py-8 text-gray-500">
-                    Nenhuma ordem encontrada para "{buscaOrdens}"
+                {ordensFiltradasPorBusca.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    {buscaOrdens 
+                      ? `Nenhuma ordem encontrada para "${buscaOrdens}"`
+                      : 'Nenhuma ordem de serviço cadastrada.'}
                   </div>
                 )}
               </div>
@@ -626,13 +704,20 @@ const OrdemServico = () => {
       </Dialog>
 
       {/* Dialog para Editar */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          resetForm();
+        }
+        setIsEditDialogOpen(isOpen);
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Ordem de Serviço - {selectedOrder?.id}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => {
+              handleSubmit(e);
+            }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-cliente">Cliente</Label>
@@ -686,7 +771,15 @@ const OrdemServico = () => {
               </div>
 
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    resetForm();
+                    setIsEditDialogOpen(false);
+                  }}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100 shadow-sm"
+                >
                   Cancelar
                 </Button>
                 <Button type="submit" className="bg-green-500 hover:bg-green-600">
