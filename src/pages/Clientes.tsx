@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, UserPlus, Search, Edit, Trash2, X, Save, Eye, EyeOff } from 'lucide-react';
+import { Users, UserPlus, Search, Edit, Trash2, X, Save, Eye, EyeOff, Maximize, Minimize, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useInputMask } from '@/hooks/useInputMask';
 import { useClientes, type Cliente } from '@/hooks/useClientes';
 import { toast } from 'sonner';
@@ -30,6 +38,7 @@ const Clientes = () => {
   const [activeTab, setActiveTab] = useState<'fisica' | 'juridica'>('fisica');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [reducedWidth, setReducedWidth] = useState(false);
   const [formData, setFormData] = useState<Partial<Cliente>>({
     tipo: 'fisica',
     nome: '',
@@ -404,7 +413,7 @@ const Clientes = () => {
       <div className="flex-1 flex flex-col">
         <Header />
         
-        <main className="flex-1 p-6 space-y-6 relative z-10">
+        <main className="flex-1 p-6 space-y-6 relative z-10 container mx-auto">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <Users className="h-8 w-8 bg-gradient-primary text-white p-1.5 rounded-lg shadow-neon-primary/30 animate-pulse-slow" />
@@ -424,7 +433,7 @@ const Clientes = () => {
 
           {/* Formulário de cadastro/edição */}
           {showForm && (
-            <Card className="animate-fade-in bg-white/80 backdrop-blur-sm border border-white/20 shadow-neon-primary/10">
+            <Card className="animate-fade-in bg-white/80 backdrop-blur-sm border border-white/20 shadow-neon-primary/10 overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>
                   {editingId ? 'Editar Cliente' : 'Novo Cliente'}
@@ -440,8 +449,8 @@ const Clientes = () => {
                   <X className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+              <CardContent className="pt-3">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Abas para selecionar o tipo de cliente */}
                   <div className="border-b border-gray-200">
                     <nav className="-mb-px flex space-x-8">
@@ -451,7 +460,7 @@ const Clientes = () => {
                         className={`${activeTab === 'fisica' 
                           ? 'border-blue-500 text-blue-600' 
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                        } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                       >
                         Pessoa Física
                       </button>
@@ -461,14 +470,14 @@ const Clientes = () => {
                         className={`${activeTab === 'juridica' 
                           ? 'border-blue-500 text-blue-600' 
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                        } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                       >
                         Pessoa Jurídica
                       </button>
                     </nav>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Campos comuns */}
                     <div>
                       <Label htmlFor="nome">{activeTab === 'fisica' ? 'Nome Completo *' : 'Nome Fantasia *'}</Label>
@@ -690,9 +699,9 @@ const Clientes = () => {
 
           {/* Lista de clientes */}
           <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-neon-primary/10">
-            <CardHeader>
+            <CardHeader className="px-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative w-full md:w-96">
+                <div className="relative w-full sm:w-96">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     type="search"
@@ -704,17 +713,17 @@ const Clientes = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center items-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8 text-red-500">
-                  {error}
-                </div>
-              ) : (
-                <div className="rounded-md border">
+            <CardContent className="p-0">
+              <div className="w-full overflow-x-auto">
+                {loading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-8 text-red-500">
+                    {error}
+                  </div>
+                ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -754,11 +763,11 @@ const Clientes = () => {
                                 : (cliente.cnpj || '-')
                               }
                             </TableCell>
-                            <TableCell>{cliente.telefone || '-'}</TableCell>
-                            <TableCell>{cliente.email || '-'}</TableCell>
-                            <TableCell>{cliente.bairro || '-'}</TableCell>
-                            <TableCell>
-                              {cliente.cidade ? `${cliente.cidade}${cliente.estado ? `/${cliente.estado}` : ''}` : '-'}
+                            <TableCell>{cliente.telefone ? formatarTelefone(cliente.telefone) : '-'}</TableCell>
+                            <TableCell className="truncate max-w-[150px]" title={cliente.email}>{cliente.email || '-'}</TableCell>
+                            <TableCell className="truncate max-w-[100px]" title={cliente.bairro}>{cliente.bairro || '-'}</TableCell>
+                            <TableCell className="truncate max-w-[100px]" title={cliente.cidade ? `${cliente.cidade}/${cliente.estado}` : '-'}>
+                              {cliente.cidade ? `${cliente.cidade}/${cliente.estado}` : '-'}
                             </TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 text-xs rounded-full ${
@@ -770,39 +779,52 @@ const Clientes = () => {
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end space-x-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => toggleStatus(cliente)}
-                                  className={`${cliente.ativo ? 'text-yellow-600 hover:bg-yellow-100' : 'text-green-600 hover:bg-green-100'}`}
-                                  title={cliente.ativo ? 'Desativar cliente' : 'Ativar cliente'}
-                                >
-                                  {cliente.ativo ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(cliente)}
-                                  className="text-blue-600 hover:bg-blue-100"
-                                  title="Editar cliente"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(cliente.id)}
-                                  className="text-red-600 hover:bg-red-100"
-                                  title="Excluir cliente"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-gray-100"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="flex items-center gap-2 cursor-pointer"
+                                    onClick={() => handleEdit(cliente)}
+                                  >
+                                    <Edit className="h-4 w-4 text-blue-600" />
+                                    <span>Editar</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="flex items-center gap-2 cursor-pointer"
+                                    onClick={() => toggleStatus(cliente)}
+                                  >
+                                    {cliente.ativo ? (
+                                      <>
+                                        <EyeOff className="h-4 w-4 text-yellow-600" />
+                                        <span>Desativar</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4 text-green-600" />
+                                        <span>Ativar</span>
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700"
+                                    onClick={() => handleDelete(cliente.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Excluir</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                         ))
@@ -815,8 +837,8 @@ const Clientes = () => {
                       )}
                     </TableBody>
                   </Table>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
         </main>

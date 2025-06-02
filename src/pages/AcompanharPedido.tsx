@@ -6,7 +6,7 @@ import AcompanhamentoPedido from '@/components/AcompanhamentoPedido';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Package, Clock, CheckCircle, Truck } from 'lucide-react';
+import { Search, Package, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
 import { useOrdenServico, useOrdensServico } from '@/hooks/useOrdenServico';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,16 +23,14 @@ const AcompanharPedido = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pendente':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'em-andamento':
-        return <Package className="h-4 w-4 text-blue-500" />;
       case 'concluido':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'entregue':
-        return <Truck className="h-4 w-4 text-purple-500" />;
+      case 'em-andamento':
+        return <Clock className="h-4 w-4 text-yellow-500 animate-pulse" />;
+      case 'pendente':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <AlertCircle className="h-4 w-4 text-gray-300" />;
     }
   };
 
@@ -61,31 +59,32 @@ const AcompanharPedido = () => {
         <Header />
         
         <main className="flex-1 p-6 space-y-6">
-          <div className="flex items-center space-x-3">
-            <Package className="h-8 w-8 text-brand-blue" />
-            <h1 className="text-3xl font-bold text-gray-900">Acompanhar Pedido</h1>
+          <div className="flex items-center space-x-2 mb-2">
+            <Package className="h-5 w-5 text-brand-blue" />
+            <h1 className="text-lg font-bold text-gray-900">Acompanhar Pedido</h1>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Buscar Ordem de Serviço</CardTitle>
+          <Card className="border border-gray-300 shadow-sm">
+            <CardHeader className="pb-0 pt-2 px-3">
+              <CardTitle className="text-sm font-medium">Buscar Ordem de Serviço</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
+            <CardContent className="pt-2 pb-2 px-3">
+              <div className="flex gap-2">
                 <div className="flex-1">
                   <Input
                     placeholder="Digite o número da OS (ex: OS-2024-001)"
                     value={searchId}
                     onChange={(e) => setSearchId(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    className="text-xs border border-gray-300 h-7 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
                 <Button 
                   onClick={handleSearch} 
-                  className="bg-brand-blue hover:bg-blue-600"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 h-7"
                   disabled={isLoadingOrder}
                 >
-                  <Search className="h-4 w-4 mr-2" />
+                  <Search className="h-3 w-3 mr-1" />
                   {isLoadingOrder ? 'Buscando...' : 'Buscar'}
                 </Button>
               </div>
@@ -93,45 +92,45 @@ const AcompanharPedido = () => {
           </Card>
 
           {selectedOrder && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detalhes do Pedido</CardTitle>
+            <div className="space-y-4">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-1 pt-2 px-3">
+                  <CardTitle className="text-sm font-medium">Detalhes do Pedido</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <CardContent className="py-2 px-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">OS</label>
-                      <p className="text-lg font-semibold text-brand-blue">{selectedOrder.numero_os}</p>
+                      <label className="text-xs font-medium text-gray-600">OS</label>
+                      <p className="text-sm font-semibold text-brand-blue">{selectedOrder.numero_os}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Cliente</label>
-                      <p className="text-lg">{selectedOrder.clientes?.nome}</p>
+                      <label className="text-xs font-medium text-gray-600">Cliente</label>
+                      <p className="text-sm">{selectedOrder.clientes?.nome}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Descrição</label>
-                      <p className="text-lg">{selectedOrder.descricao || 'Não informado'}</p>
+                      <label className="text-xs font-medium text-gray-600">Descrição</label>
+                      <p className="text-sm">{selectedOrder.descricao || 'Não informado'}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Valor</label>
-                      <p className="text-lg font-semibold">R$ {selectedOrder.valor_total.toFixed(2)}</p>
+                      <label className="text-xs font-medium text-gray-600">Valor</label>
+                      <p className="text-sm font-semibold">R$ {selectedOrder.valor_total.toFixed(2)}</p>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center gap-4">
-                    <div className="flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1">
                       {getStatusIcon(selectedOrder.status)}
                       {getStatusBadge(selectedOrder.status)}
                     </div>
                     {selectedOrder.data_prevista_entrega && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Previsão de Entrega</label>
-                        <p className="text-sm">{new Date(selectedOrder.data_prevista_entrega).toLocaleDateString('pt-BR')}</p>
+                        <label className="text-xs font-medium text-gray-600">Previsão de Entrega</label>
+                        <p className="text-xs">{new Date(selectedOrder.data_prevista_entrega).toLocaleDateString('pt-BR')}</p>
                       </div>
                     )}
                     {selectedOrder.data_entrega && (
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Data de Entrega</label>
-                        <p className="text-sm">{new Date(selectedOrder.data_entrega).toLocaleDateString('pt-BR')}</p>
+                        <label className="text-xs font-medium text-gray-600">Data de Entrega</label>
+                        <p className="text-xs">{new Date(selectedOrder.data_entrega).toLocaleDateString('pt-BR')}</p>
                       </div>
                     )}
                   </div>
@@ -143,41 +142,37 @@ const AcompanharPedido = () => {
           )}
 
           {searchAttempted && !selectedOrder && !isLoadingOrder && searchId && (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-gray-500">Nenhuma ordem de serviço encontrada com o número: {searchId}</p>
-              </CardContent>
-            </Card>
+            <p className="text-red-500 mt-2 mb-6 font-medium">Nenhuma ordem de serviço encontrada com o número: {searchId}</p>
           )}
 
           {!searchId && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Ordens de Serviço Recentes</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-sm font-medium">Ordens de Serviço Recentes</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="py-2 px-3">
                 {isLoadingAllOrders ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Carregando ordens de serviço...</p>
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                   </div>
                 ) : allOrders && allOrders.length > 0 ? (
                   <div className="space-y-3">
                     {allOrders.slice(0, 5).map((order) => (
                       <div 
                         key={order.id} 
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center justify-between py-2 px-2 border rounded-lg hover:bg-gray-50 cursor-pointer mb-1"
                         onClick={() => setSearchId(order.numero_os)}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           {getStatusIcon(order.status)}
                           <div>
-                            <p className="font-semibold text-brand-blue">{order.numero_os}</p>
-                            <p className="text-sm text-gray-600">{order.clientes?.nome}</p>
+                            <p className="text-xs font-semibold text-brand-blue">{order.numero_os}</p>
+                            <p className="text-xs text-gray-600">{order.clientes?.nome}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           {getStatusBadge(order.status)}
-                          <p className="font-semibold">R$ {order.valor_total.toFixed(2)}</p>
+                          <p className="text-xs font-semibold">R$ {order.valor_total.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}

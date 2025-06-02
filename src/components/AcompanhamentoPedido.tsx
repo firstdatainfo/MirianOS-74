@@ -42,9 +42,9 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
       case 'concluido':
         return <CheckCircle className="h-6 w-6 text-green-500" />;
       case 'em-andamento':
-        return <Clock className="h-6 w-6 text-blue-500 animate-pulse" />;
+        return <Clock className="h-6 w-6 text-yellow-500 animate-pulse" />;
       case 'pendente':
-        return <AlertCircle className="h-6 w-6 text-gray-300" />;
+        return <AlertCircle className="h-6 w-6 text-red-500" />;
       default:
         return <AlertCircle className="h-6 w-6 text-gray-300" />;
     }
@@ -53,11 +53,11 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'concluido':
-        return 'bg-green-100 border-green-300';
+        return 'bg-green-50 border-green-500';
       case 'em-andamento':
-        return 'bg-blue-100 border-blue-300 shadow-md';
+        return 'bg-yellow-50 border-yellow-500 shadow-sm';
       case 'pendente':
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-red-50 border-red-500';
       default:
         return 'bg-gray-50 border-gray-200';
     }
@@ -66,15 +66,15 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
   const getBadgeStatus = (status: string) => {
     switch (status) {
       case 'pendente':
-        return { text: 'Pendente', className: 'bg-yellow-500 text-white' };
+        return { text: 'Pendente', className: 'bg-red-500 text-white' };
       case 'em-andamento':
-        return { text: 'Em Andamento', className: 'bg-blue-500 text-white' };
+        return { text: 'Andamento', className: 'bg-yellow-500 text-black' };
       case 'concluido':
         return { text: 'Concluído', className: 'bg-green-500 text-white' };
       case 'entregue':
         return { text: 'Entregue', className: 'bg-purple-500 text-white' };
       case 'cancelado':
-        return { text: 'Cancelado', className: 'bg-red-500 text-white' };
+        return { text: 'Cancelado', className: 'bg-red-700 text-white' };
       default:
         return { text: 'Desconhecido', className: 'bg-gray-500 text-white' };
     }
@@ -115,7 +115,40 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
         });
         return;
       }
-
+      
+      // Verifica se todas as etapas estão concluídas após esta atualização
+      if (newStatus === 'concluido') {
+        // Busca status atualizado de todas as etapas
+        const { data: updatedAcompanhamento, error: fetchError } = await supabase
+          .from('acompanhamento_os')
+          .select('*')
+          .eq('ordem_servico_id', ordemServico.id);
+          
+        if (!fetchError && updatedAcompanhamento) {
+          // Verifica se TODAS as etapas estão com status 'concluido'
+          const todasEtapasConcluidas = updatedAcompanhamento.every(
+            (etapa) => etapa.status === 'concluido'
+          );
+          
+          // Se todas estiverem concluídas, atualiza o status da ordem de serviço
+          if (todasEtapasConcluidas) {
+            const { error: osError } = await supabase
+              .from('ordens_servico')
+              .update({ status: 'concluido', data_conclusao: new Date().toISOString() })
+              .eq('id', ordemServico.id);
+              
+            if (osError) {
+              console.error('Erro ao atualizar status da ordem:', osError);
+            } else {
+              toast({
+                title: "Sucesso",
+                description: "Todas as etapas concluídas! Pedido finalizado.",
+              });
+            }
+          }
+        }
+      }
+      
       toast({
         title: "Sucesso",
         description: "Status da etapa atualizado com sucesso",
@@ -156,58 +189,58 @@ const AcompanhamentoPedido: React.FC<AcompanhamentoPedidoProps> = ({ ordemServic
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Truck className="h-5 w-5" />
+    <Card className="shadow-sm">
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="flex items-center gap-1 text-sm">
+          <Truck className="h-4 w-4" />
           Acompanhar Pedido {ordemServico.numero_os}
         </CardTitle>
-        <div className="flex items-center gap-4">
-          <Badge className={badgeStatus.className}>
+        <div className="flex items-center gap-2">
+          <Badge className={badgeStatus.className + " text-xs py-0 px-2 h-5"}>
             {badgeStatus.text}
           </Badge>
-          <span className="text-sm text-gray-600">
+          <span className="text-xs text-gray-600">
             Cliente: {ordemServico.clientes?.nome}
           </span>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="py-2 px-3">
+        <div className="space-y-3">
           {acompanhamento.map((item, index) => (
-            <div key={item.id} className="flex items-start gap-4">
+            <div key={item.id} className="flex items-start gap-3">
               <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-gray-200">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 ${item.status === 'concluido' ? 'border-green-500' : item.status === 'em-andamento' ? 'border-yellow-500' : 'border-red-500'}`}>
                   {getEtapaIcon(item.etapas_producao.nome)}
                 </div>
                 {index < acompanhamento.length - 1 && (
-                  <div className={`w-0.5 h-12 mt-2 ${
-                    item.status === 'concluido' ? 'bg-green-300' : 'bg-gray-200'
+                  <div className={`w-0.5 h-8 mt-1 ${
+                    item.status === 'concluido' ? 'bg-green-500' : item.status === 'em-andamento' ? 'bg-yellow-500' : 'bg-red-500'
                   }`} />
                 )}
               </div>
               
-              <div className={`flex-1 p-4 rounded-lg border-2 ${getStatusColor(item.status)}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{item.etapas_producao.nome}</h3>
-                  <div className="flex items-center gap-2">
+              <div className={`flex-1 p-3 rounded-lg border ${getStatusColor(item.status)}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-gray-900 text-sm">{item.etapas_producao.nome}</h3>
+                  <div className="flex items-center gap-1">
                     {getStatusIcon(item.status)}
                     <Select 
                       value={item.status || 'pendente'} 
                       onValueChange={(value) => handleStatusChange(item.id, value)}
                     >
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-28 h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="em-andamento">Em Andamento</SelectItem>
+                        <SelectItem value="em-andamento">Andamento</SelectItem>
                         <SelectItem value="concluido">Concluído</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <p className="text-gray-600 text-sm">{item.etapas_producao.descricao}</p>
-                <div className="mt-2 space-y-1">
+                <p className="text-gray-600 text-xs">{item.etapas_producao.descricao}</p>
+                <div className="mt-1 space-y-0.5">
                   {item.data_inicio && (
                     <p className="text-xs text-gray-500">
                       Iniciado: {new Date(item.data_inicio).toLocaleDateString('pt-BR')} às {new Date(item.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}

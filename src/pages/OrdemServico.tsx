@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ClipboardList, Plus, Search, Edit, Eye, X, User, Phone, Mail, MapPin } from 'lucide-react';
+import { ClipboardList, Plus, Search, Edit, Eye, X, User, Phone, Mail, MapPin, Calendar, FileText, CreditCard, Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,6 +23,13 @@ interface Cliente {
   cidade?: string;
   estado?: string;
   cep?: string;
+  tipo?: 'fisica' | 'juridica';
+  cpf?: string;
+  cnpj?: string;
+  rg?: string;
+  inscricao_estadual?: string;
+  data_nascimento?: string;
+  bairro?: string;
 }
 
 interface OrdemServico {
@@ -743,6 +750,47 @@ const OrdemServico = () => {
                         <User className="h-4 w-4 mr-2 text-blue-500" />
                         <span><strong>Nome:</strong> {selectedOrder.cliente}</span>
                       </p>
+                      {clienteSelecionado?.tipo && (
+                        <p className="flex items-center">
+                          <CreditCard className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>Tipo:</strong> {clienteSelecionado.tipo === 'fisica' ? 'Pessoa Física' : 'Pessoa Jurídica'}</span>
+                        </p>
+                      )}
+                      {/* CPF ou CNPJ */}
+                      {clienteSelecionado?.tipo === 'fisica' && clienteSelecionado?.cpf && (
+                        <p className="flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>CPF:</strong> {clienteSelecionado.cpf}</span>
+                        </p>
+                      )}
+                      {clienteSelecionado?.tipo === 'juridica' && clienteSelecionado?.cnpj && (
+                        <p className="flex items-center">
+                          <Building className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>CNPJ:</strong> {clienteSelecionado.cnpj}</span>
+                        </p>
+                      )}
+                      {/* RG ou Inscrição Estadual */}
+                      {clienteSelecionado?.tipo === 'fisica' && clienteSelecionado?.rg && (
+                        <p className="flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>RG:</strong> {clienteSelecionado.rg}</span>
+                        </p>
+                      )}
+                      {clienteSelecionado?.tipo === 'juridica' && clienteSelecionado?.inscricao_estadual && (
+                        <p className="flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>Inscrição Estadual:</strong> {clienteSelecionado.inscricao_estadual}</span>
+                        </p>
+                      )}
+                      {/* Data de nascimento (pessoa física) */}
+                      {clienteSelecionado?.tipo === 'fisica' && clienteSelecionado?.data_nascimento && (
+                        <p className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                          <span><strong>Data de Nascimento:</strong> {clienteSelecionado.data_nascimento}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
                       {clienteSelecionado?.telefone && (
                         <p className="flex items-center">
                           <Phone className="h-4 w-4 mr-2 text-blue-500" />
@@ -755,14 +803,13 @@ const OrdemServico = () => {
                           <span><strong>E-mail:</strong> {clienteSelecionado.email}</span>
                         </p>
                       )}
-                    </div>
-                    <div className="space-y-2">
                       {(clienteSelecionado?.endereco || clienteSelecionado?.cidade || clienteSelecionado?.estado || clienteSelecionado?.cep) && (
                         <div className="flex items-start">
                           <MapPin className="h-4 w-4 mr-2 text-blue-500 mt-0.5 flex-shrink-0" />
                           <div>
                             <p><strong>Endereço:</strong></p>
                             {clienteSelecionado.endereco && <p>{clienteSelecionado.endereco}</p>}
+                            {clienteSelecionado.bairro && <p><strong>Bairro:</strong> {clienteSelecionado.bairro}</p>}
                             <div className="flex flex-wrap gap-2 mt-1">
                               {clienteSelecionado.cidade && <span>{clienteSelecionado.cidade}</span>}
                               {clienteSelecionado.estado && <span>{clienteSelecionado.estado}</span>}
@@ -823,12 +870,11 @@ const OrdemServico = () => {
       }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Ordem de Serviço - {selectedOrder?.id}</DialogTitle>
+            <DialogTitle>Editar Ordem de Serviço {editingId && `- ${editingId}`}</DialogTitle>
           </DialogHeader>
-          {selectedOrder && (
-            <form onSubmit={(e) => {
-              handleSubmit(e);
-            }} className="space-y-4">
+          <form onSubmit={(e) => {
+            handleSubmit(e);
+          }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-cliente">Cliente</Label>
@@ -860,14 +906,165 @@ const OrdemServico = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-preco">Preço Unitário</Label>
+                  <Label htmlFor="edit-quantidade">Quantidade</Label>
                   <Input 
-                    id="edit-preco"
+                    id="edit-quantidade"
+                    type="number" 
+                    value={formData.quantidade} 
+                    onChange={e => setFormData({ ...formData, quantidade: parseInt(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-precoUnitario">Preço Unitário</Label>
+                  <Input 
+                    id="edit-precoUnitario"
                     type="number" 
                     step="0.01"
                     value={formData.precoUnitario} 
                     onChange={e => setFormData({ ...formData, precoUnitario: parseFloat(e.target.value) })}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="edit-valor">Valor Total</Label>
+                  <Input 
+                    id="edit-valor"
+                    type="number" 
+                    step="0.01"
+                    value={formData.valor} 
+                    onChange={e => setFormData({ ...formData, valor: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-pedido-corte">Corte</Label>
+                  <Input 
+                    id="edit-pedido-corte"
+                    value={formData.pedido.corte} 
+                    onChange={e => setFormData({ ...formData, pedido: { ...formData.pedido, corte: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-pedido-estampa">Estampa</Label>
+                  <Input 
+                    id="edit-pedido-estampa"
+                    value={formData.pedido.estampa} 
+                    onChange={e => setFormData({ ...formData, pedido: { ...formData.pedido, estampa: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-pedido-costura">Costura</Label>
+                  <Input 
+                    id="edit-pedido-costura"
+                    value={formData.pedido.costura} 
+                    onChange={e => setFormData({ ...formData, pedido: { ...formData.pedido, costura: e.target.value } })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-tipo-manga">Tipo Manga</Label>
+                  <Input 
+                    id="edit-tipo-manga"
+                    value={formData.tipo.manga} 
+                    onChange={e => setFormData({ ...formData, tipo: { ...formData.tipo, manga: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-tipo-barra">Tipo Barra</Label>
+                  <Input 
+                    id="edit-tipo-barra"
+                    value={formData.tipo.barra} 
+                    onChange={e => setFormData({ ...formData, tipo: { ...formData.tipo, barra: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-tipo-gola">Tipo Gola</Label>
+                  <Input 
+                    id="edit-tipo-gola"
+                    value={formData.tipo.gola} 
+                    onChange={e => setFormData({ ...formData, tipo: { ...formData.tipo, gola: e.target.value } })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-manga">Manga</Label>
+                  <Input 
+                    id="edit-manga"
+                    value={formData.manga} 
+                    onChange={e => setFormData({ ...formData, manga: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-barra">Barra</Label>
+                  <Input 
+                    id="edit-barra"
+                    value={formData.barra} 
+                    onChange={e => setFormData({ ...formData, barra: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-gola">Gola</Label>
+                  <Input 
+                    id="edit-gola"
+                    value={formData.gola} 
+                    onChange={e => setFormData({ ...formData, gola: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-tipoTecido">Tipo de Tecido</Label>
+                  <Input 
+                    id="edit-tipoTecido"
+                    value={formData.tipoTecido} 
+                    onChange={e => setFormData({ ...formData, tipoTecido: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-qualidade">Qualidade</Label>
+                  <Input 
+                    id="edit-qualidade"
+                    value={formData.qualidade} 
+                    onChange={e => setFormData({ ...formData, qualidade: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-tamanho">Tamanho</Label>
+                  <Input 
+                    id="edit-tamanho"
+                    value={formData.tamanho} 
+                    onChange={e => setFormData({ ...formData, tamanho: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-acabamento">Acabamento</Label>
+                  <Input 
+                    id="edit-acabamento"
+                    value={formData.acabamento} 
+                    onChange={e => setFormData({ ...formData, acabamento: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="edit-apresentar"
+                    checked={formData.apresentar}
+                    onChange={(e) => setFormData({ ...formData, apresentar: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                  />
+                  <Label htmlFor="edit-apresentar">Apresentar ao cliente</Label>
                 </div>
               </div>
 
@@ -898,7 +1095,6 @@ const OrdemServico = () => {
                 </Button>
               </div>
             </form>
-          )}
         </DialogContent>
       </Dialog>
     </div>
